@@ -1,0 +1,6 @@
+.vscode
+.DS_Store
+input/synopsys*
+
+tdm
+*.o

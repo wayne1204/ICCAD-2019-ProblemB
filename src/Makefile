@@ -1,0 +1,18 @@
+CC=g++
+CFLAGS = -Wall -O2 -std=c++11  
+# CFLAGS = -Wall -g -std=c++11 
+
+EXE = tdm
+OBJ = main.o tdm.o component.o
+
+all:$(EXE)
+
+$(EXE): $(OBJ)
+	$(CC) $(CFLAGS) -o ../$@ $^
+
+%.o: %.cpp
+	$(CC) $(CFLAGS) -c $<
+
+.PHONY: clean
+clean:
+	rm -f *.o ../$(EXE)                
