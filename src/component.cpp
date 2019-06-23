@@ -1,13 +1,80 @@
 #include <fstream>
 #include <iostream>
+#include <queue>
+#include <set>
+#include <utility>
 #include "component.h"
+
+void FPGA::setConnection(Edge* e, FPGA* f){
+    _connection.push_back(make_pair(f,e));
+}
+
+void FPGA::showInfo(){
+    cout << "[ FPGA #" << _uid <<  " ]\n";
+    cout << "number of edges: " << getEdgeNum() << endl;
+    cout << "(fpga id, edge id): ";
+    for(int i = 0; i < getEdgeNum(); i++){
+        cout << "(" << _connection[i].first->getId() << "," << _connection[i].second->getId() << ") ";
+    }
+    cout << endl;
+}
 
 void Net::calculateTDM(){
     _TDM = 0;
     for(unsigned int i=0; i<_cur_route.size();i++){
-        _TDM += lookupTable[_cur_route[i]->getCongestion()]; //check lookuptable name
+        // _TDM += lookupTable[_cur_route[i]->getCongestion()]; //check lookuptable name
     }
 }
+
+void Net::decomposition(){
+    if(_targets.size() == 1){
+        SubNet* sn = new SubNet(0, this, _source, _targets[0]);
+        _subnets.push_back(sn);
+        return;
+    }
+    // construct MST
+    queue<FPGA*> Q;
+    Q.push(_source);
+    _source->setVisited();
+    while(!Q.empty()){
+        FPGA* f = Q.front();
+        Q.pop();
+        for(int i = 0; i < f->getEdgeNum(); ++i){
+            if(!f->getConnectedFPGA(i)->isVisited()){
+                Q.push(f->getConnectedFPGA(i));
+                f->getConnectedFPGA(i)->setParent(make_pair(f ,f->getEdge(i)));
+                f->getConnectedFPGA(i)->setVisited();
+            }
+        }
+    }
+
+    set<Edge*> subnets;
+    int count = 0;
+    for(int i = 0; i < _targets.size(); ++i){
+        FPGA* f = _targets[i];
+        while(f->getParent().first != NULL){ 
+            Edge* e = f->getParent().second;
+            if(subnets.find(e) == subnets.end()){
+                subnets.insert(e);
+                SubNet* sb = new SubNet(count++, this, f->getParent().first, f);
+                _subnets.push_back(sb);
+            }
+            f = f->getParent().first;
+        }
+    }
+}
+
+void Net::showInfo(){
+    cout << "[ Net #" << _uid <<  " ]\n";
+    cout << "number of subnets: " << getSubnetNum() << endl;
+    cout << "(fpga id, fpga id): ";
+    for(int i = 0; i < getSubnetNum(); i++){
+        cout << "(" << _subnets[i]->getSource()->getId() << "," << _subnets[i]->getTarget()->getId() << ") ";
+    }
+    cout << endl;
+}
+
+
 void NetGroup::calculateTDM(){
     _TDM = 0;
     for(unsigned int i=0; i<_nets.size();i++){

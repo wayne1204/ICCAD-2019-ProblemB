@@ -11,8 +11,8 @@ class TDM
     public:
     bool parseFile(const char* fname);
     void showStatus();
+    void decomposeNet();
     void global_router();
-
 
     private:
     size_t getToken(size_t pos, string& s, string& token);

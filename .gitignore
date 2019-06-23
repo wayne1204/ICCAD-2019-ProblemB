@@ -4,3 +4,5 @@ input/synopsys*
 
 tdm
 *.o
+*.py
+*.out

@@ -3,11 +3,17 @@
 
 #include <vector>
 #include <fstream>
+#include <utility>
+
+#define pIF pair<int,FPGA*>
+#define pFE pair<FPGA*,Edge*>
+
 using namespace std;
 
 class FPGA;
 class Edge;
 class Net;
+class SubNet;
 class NetGroup;
 
 class FPGA
@@ -15,13 +21,29 @@ class FPGA
 public:
     FPGA(unsigned id){
         _uid = id;
+        _visited = false;
+        pFE p(NULL, NULL);
+        _parent = p;
     }
     unsigned getId() {return _uid;}
-    void connect(Net* n) {_connections.push_back(n);}
+    // for decompostion
+    void setVisited() {_visited = true; }
+    bool isVisited() {return _visited; }
+    void setParent(pFE p) {_parent = p;}
+    pFE getParent() {return _parent;}
+
+    void setConnection(Edge* e, FPGA* f);
+    int getEdgeNum() {return _connection.size(); }
+    Edge* getEdge(unsigned i) {return _connection[i].second; }
+    FPGA* getConnectedFPGA(unsigned i) {return _connection[i].first; }
+    pFE  getConnection(unsigned i ) {return _connection[i];}
+    void showInfo();
 
 private:
+    bool _visited;
     unsigned _uid;
-    vector<Net*> _connections;
+    pFE _parent;
+    vector<pFE> _connection;
 };
 
 // FPGA connections
@@ -34,6 +56,7 @@ public:
         _congestion = 0;
     }
     void setVertex(FPGA* f1, FPGA* f2) {_source = f1; _target = f2;}
+    unsigned getId() {return _uid;}
     int getWeight(){return _weight;}
     int getCongestion(){return _congestion;}
     void updateWeight(int iteration);
@@ -42,10 +65,10 @@ public:
 
 private:
     unsigned _uid;
-    FPGA* _source;
-    FPGA* _target;
     int _weight;
     int _congestion;
+    FPGA* _source;
+    FPGA* _target;
 };
 
 class Net
@@ -62,18 +85,43 @@ public:
     int getTDM(){return _TDM;}
     void setTDM(int t){_TDM = t;}
     void calculateTDM();
-    //GetSubnetNum
+    void decomposition();
+    int getSubnetNum() { return _subnets.size(); }
+    SubNet* getSubNet(unsigned i) { return _subnets[i]; }
+    void showInfo();
+
 private:
     unsigned _uid;
+    int _TDM;
     FPGA* _source;
     vector<FPGA*> _targets;
-    //vector for Subnet
+    vector<SubNet*> _subnets;     //vector for Subnet
     vector<Edge*> _cur_route;
     vector<Edge*> _min_route;
-    int _TDM;
 };
 
-//need class Subnet
+class SubNet
+{
+public:
+    SubNet(unsigned id, Net* net, FPGA* s, FPGA* t)
+    {
+        _uid = id;
+        _net = net;
+        _source = s;
+        _target = t;
+    }
+
+    unsigned getId() {return _uid;}
+    Net* getNet() {return _net;}
+    FPGA* getSource() {return _source;}
+    FPGA* getTarget() {return _target;}
+private:
+    unsigned _uid;
+    Net* _net;
+    FPGA* _source;
+    FPGA* _target;
+    
+};
 
 class NetGroup
 {

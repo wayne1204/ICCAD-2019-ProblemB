@@ -1,11 +1,10 @@
 #include <fstream>
 #include <iostream>
+#include <set>
 #include <math.h>
 #include <limits>
 #include "tdm.h"
 
-#define pIF pair<int,FPGA*>
-#define pFE pair<FPGA*,Edge*>
 
 using namespace std;
 
@@ -45,6 +44,8 @@ bool TDM::parseFile(const char* fname){
         Edge* e = new Edge(i);
         e->setVertex(_FPGA_V[f1], _FPGA_V[f2]);
         _edge_V.push_back(e);
+        _FPGA_V[f1]->setConnection(e, _FPGA_V[f2]);
+        _FPGA_V[f2]->setConnection(e, _FPGA_V[f1]);
     }
 
     // nets
@@ -77,6 +78,11 @@ bool TDM::parseFile(const char* fname){
     return true;
 }
 
+void TDM::decomposeNet(){
+    for(int i = 0; i < _net_V.size(); ++i){
+        _net_V[i]->decomposition();
+    }
+}
 
 void TDM::showStatus(){
     cout <<" ============[ status ]============ \n";
@@ -84,6 +90,16 @@ void TDM::showStatus(){
     cout <<"    #edge    | " << _edge_V.size() << endl;
     cout <<"    #nets    | " << _net_V.size() << endl;
     cout <<" #net groups | " << _group_V.size() << endl;
+
+    cout <<endl;
+    for(int i = 0; i < _FPGA_V.size(); ++i){
+        _FPGA_V[i]->showInfo();
+    }
+
+    cout <<endl;
+    for(int i = 0; i < _net_V.size(); ++i){
+        _net_V[i]->showInfo();
+    }
 }
 
 
@@ -109,7 +125,7 @@ void TDM::global_router(){
     }
     for(unsigned int i=0;i<_group_V.size();i++){
          _group_V[i]->calculateTDM();
-         int t = _group_V[i].getTDM();
+         int t = _group_V[i]->getTDM();
          if(t>maxTDM)maxTDM = t;
 
     }
@@ -121,7 +137,7 @@ void TDM::global_router(){
         for(unsigned int i=0;i<_net_V.size();i++){
             _net_V[i]->updateMin_route();
         }
-        terminateConditionCount = 0
+        terminateConditionCount = 0;
     }
     else{
         terminateConditionCount++;
@@ -132,13 +148,8 @@ void TDM::global_router(){
     for(unsigned int i=0;i<_edge_V.size();i++){
         _edge_V[i]->updateWeight(iteration);
     }
-
-
-     iteration++;
+    iteration++;
  }
-
-
-
 }
 
 // cut a string from space
@@ -157,7 +168,7 @@ size_t TDM::getToken(size_t pos, string& s, string& token){
 stack<FPGA*> TDM::Dijkstras(FPGA* source,FPGA* target,unsigned int num){
     set<pIF> Q;
     int maxI = numeric_limits<int>::max();
-    vector<int>d(num,maxI); //distance
+    vector<int>d (num,maxI); //distance
     vector<pFE> parent(num); //Record the parentId and edge of each FPGA after Dijkstras
     d[source] = 0;
     parent[source->getId()] = pFE(source,NULL);
@@ -170,21 +181,21 @@ stack<FPGA*> TDM::Dijkstras(FPGA* source,FPGA* target,unsigned int num){
         Q.erase(Q.begin());
         a = top.second;
         if(a==target)break; //Find the target
-        else if(_pachcheck_V[a->getId()])break; // Find the steiner point
+        else if(_pathcheck_V[a->getId()])break; // Find the steiner point
 
         int w;
         FPGA* b;
         Edge* e;
-        for(unsigned int i=0; i<a->GetEdgeNum; i++){
-            b = a->GetconnectedFPGA(i);
-            e = a->GetEdge(i);
-            w = e.getWeight();
+        for(unsigned i=0; i < a->getEdgeNum(); i++){
+            b = a->getConnectedFPGA(i);
+            e = a->getEdge(i);
+            w = e->getWeight();
             if(d[a->getId()] + w < d[b->getId()]){
                 if(d[b->getId()]!=maxI){
                     Q.erase(Q.find(pIF(d[b->getId()], b)));
                 }
                 d[b->getId()] = d[a->getId()] + w;
-                parent[b.getId()] = pFE(a,e);
+                parent[b->getId()] = pFE(a,e);
                 Q.insert(pIF(d[b->getId()],b));
             }
         }
@@ -204,11 +215,11 @@ void TDM::local_router(){
         Net* n = _net_V[i];
         _pathcheck_V.resize(_FPGA_V.size(),false);
         n->initializeCur_route();
-        for(unsigned int j=0; j < n->GetSubnetNum; j++){
-            SubNet* sn = n->GetSubNet(i);
+        for(unsigned int j=0; j < n->getSubnetNum(); j++){
+            SubNet* sn = n->getSubNet(i);
             FPGA* source = sn->getSource();
             FPGA* target = sn->getTarget();
-            if(_pathcheck_V[source.getId()] && !_pathcheck_V[target.getId()]){ // We can swap source and target in order to efficiently find steiner point
+            if(_pathcheck_V[source->getId()] && !_pathcheck_V[target->getId()]){ // We can swap source and target in order to efficiently find steiner point
                 FPGA* temp = source;
                 source = target;
                 target = temp;
@@ -222,23 +233,23 @@ void TDM::local_router(){
                 route_S.pop();
                 connectFPGA = p.first;
                 connectEdge = p.second;
-                _pathcheck_V[connectFPGA.getId()] = true;
+                _pathcheck_V[connectFPGA->getId()] = true;
                 if(connectEdge!=NULL){
                     connectEdge->addCongestion();
-                    n.addEdgetoCur_route(connectEdge);
+                    n->addEdgetoCur_route(connectEdge);
                 }
             }
-            if(!_pathcheck_V[target.getId()]){ // target is not connected
+            if(!_pathcheck_V[target->getId()]){ // target is not connected
                 route_S = Dijkstras(target,source,_FPGA_V.size());
                 while(!route_S.empty()){
                     pFE p = route_S.top();
                     route_S.pop();
                     connectFPGA = p.first;
                     connectEdge = p.second;
-                    _pathcheck_V[connectFPGA.getId()] = true;
+                    _pathcheck_V[connectFPGA->getId()] = true;
                     if(connectEdge!=NULL){
                         connectEdge->addCongestion();
-                        n.addEdgetoCur_route(connectEdge);
+                        n->addEdgetoCur_route(connectEdge);
                     }
                 }
             }

@@ -14,6 +14,7 @@ int main(int argc, char** argv){
         cout << "file \"" << argv[1] << "\" not found!\n";
         return -1;
     }
+    tdm.decomposeNet();
     tdm.showStatus();
     return 0;
 }
