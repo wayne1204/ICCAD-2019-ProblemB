@@ -121,8 +121,9 @@ void TDM::global_router(){
         for(unsigned int i=0;i<_net_V.size();i++){
             _net_V[i]->updateMin_route();
         }
+        terminateConditionCount = 0
     }
-    else(maxTDM > minimumTDM){
+    else{
         terminateConditionCount++;
         if(terminateConditionCount > 3)break;
     }
