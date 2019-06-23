@@ -16,7 +16,7 @@ class TDM
 
     private:
     size_t getToken(size_t pos, string& s, string& token);
-    stack<FPGA*> Dijkstras(FPGA* source,FPGA* target,unsigned int num);
+    stack<pair<FPGA*,Edge*> > Dijkstras(FPGA* source,FPGA* target,unsigned int num);
     void local_router();
     vector<FPGA*> _FPGA_V;
     vector<Edge*> _edge_V;
