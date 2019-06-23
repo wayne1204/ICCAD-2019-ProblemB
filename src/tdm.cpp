@@ -3,6 +3,7 @@
 #include <set>
 #include <math.h>
 #include <limits>
+#include <set>
 #include "tdm.h"
 
 
@@ -164,9 +165,13 @@ size_t TDM::getToken(size_t pos, string& s, string& token){
     return end;
 }
 
+struct pIFcomp {
+  bool operator() (const pIF& lhs, const pIF& rhs) const
+  {return lhs.first < rhs.first;}
+};
 //single source single target shortest path
-stack<FPGA*> TDM::Dijkstras(FPGA* source,FPGA* target,unsigned int num){
-    set<pIF> Q;
+stack<pFE> TDM::Dijkstras(FPGA* source,FPGA* target,unsigned int num){
+    set<pIF,pIFcomp> Q;
     int maxI = numeric_limits<int>::max();
     vector<int>d (num,maxI); //distance
     vector<pFE> parent(num); //Record the parentId and edge of each FPGA after Dijkstras
@@ -186,10 +191,10 @@ stack<FPGA*> TDM::Dijkstras(FPGA* source,FPGA* target,unsigned int num){
         int w;
         FPGA* b;
         Edge* e;
-        for(unsigned i=0; i < a->getEdgeNum(); i++){
+        for(unsigned int i=0; i<a->getEdgeNum(); i++){
             b = a->getConnectedFPGA(i);
             e = a->getEdge(i);
-            w = e->getWeight();
+            w = e.getWeight();
             if(d[a->getId()] + w < d[b->getId()]){
                 if(d[b->getId()]!=maxI){
                     Q.erase(Q.find(pIF(d[b->getId()], b)));
@@ -224,7 +229,7 @@ void TDM::local_router(){
                 source = target;
                 target = temp;
             }
-            stack<FPGA*> route_S = Dijkstras(source,target,_FPGA_V.size());
+            stack<pFE> route_S = Dijkstras(source,target,_FPGA_V.size());
 
             FPGA* connectFPGA;
             Edge* connectEdge;
