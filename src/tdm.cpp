@@ -159,7 +159,7 @@ struct pIFcomp {
   {return lhs.first < rhs.first;}
 };
 //single source single target shortest path
-stack<FPGA*> TDM::Dijkstras(FPGA* source,FPGA* target,unsigned int num){
+stack<pFE> TDM::Dijkstras(FPGA* source,FPGA* target,unsigned int num){
     set<pIF,pIFcomp> Q;
     int maxI = numeric_limits<int>::max();
     vector<int>d(num,maxI); //distance
@@ -218,7 +218,7 @@ void TDM::local_router(){
                 source = target;
                 target = temp;
             }
-            stack<FPGA*> route_S = Dijkstras(source,target,_FPGA_V.size());
+            stack<pFE> route_S = Dijkstras(source,target,_FPGA_V.size());
 
             FPGA* connectFPGA;
             Edge* connectEdge;
