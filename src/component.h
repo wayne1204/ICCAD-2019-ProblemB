@@ -18,10 +18,12 @@ public:
     }
     unsigned getId() {return _uid;}
     void connect(Net* n) {_connections.push_back(n);}
+    //int getEdgeNum();
 
 private:
     unsigned _uid;
     vector<Net*> _connections;
+    //vector for edge
 };
 
 // FPGA connections

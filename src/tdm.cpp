@@ -2,6 +2,7 @@
 #include <iostream>
 #include <math.h>
 #include <limits>
+#include <set>
 #include "tdm.h"
 
 #define pIF pair<int,FPGA*>
@@ -121,7 +122,7 @@ void TDM::global_router(){
         for(unsigned int i=0;i<_net_V.size();i++){
             _net_V[i]->updateMin_route();
         }
-        terminateConditionCount = 0
+        terminateConditionCount = 0;
     }
     else{
         terminateConditionCount++;
@@ -153,9 +154,13 @@ size_t TDM::getToken(size_t pos, string& s, string& token){
     return end;
 }
 
+struct pIFcomp {
+  bool operator() (const pIF& lhs, const pIF& rhs) const
+  {return lhs.first < rhs.first;}
+};
 //single source single target shortest path
 stack<FPGA*> TDM::Dijkstras(FPGA* source,FPGA* target,unsigned int num){
-    set<pIF> Q;
+    set<pIF,pIFcomp> Q;
     int maxI = numeric_limits<int>::max();
     vector<int>d(num,maxI); //distance
     vector<pFE> parent(num); //Record the parentId and edge of each FPGA after Dijkstras
@@ -175,7 +180,7 @@ stack<FPGA*> TDM::Dijkstras(FPGA* source,FPGA* target,unsigned int num){
         int w;
         FPGA* b;
         Edge* e;
-        for(unsigned int i=0; i<a->GetEdgeNum; i++){
+        for(unsigned int i=0; i<a->GetEdgeNum(); i++){
             b = a->GetconnectedFPGA(i);
             e = a->GetEdge(i);
             w = e.getWeight();
