@@ -1,6 +1,12 @@
 #include <fstream>
 #include <iostream>
+#include <math.h>
+#include <limits>
 #include "tdm.h"
+
+#define pIF pair<int,FPGA*>
+#define pFE pair<FPGA*,Edge*>
+
 using namespace std;
 
 // parse input file
@@ -80,7 +86,61 @@ void TDM::showStatus(){
     cout <<" #net groups | " << _group_V.size() << endl;
 }
 
-// cut a string from space  
+
+//phase1
+void TDM::global_router(){
+
+ int iteration = 0;
+ int minimumTDM = numeric_limits<int>::max();
+ int terminateConditionCount = 0;
+ while(1){
+    //Initialize Edge's congestion to zero every iteration
+    for(unsigned int i=0;i<_edge_V.size();i++){
+        _edge_V[i]->initializeCongestion();
+    }
+
+    //Use shortest path algorithm to route all nets
+    local_router();
+
+    //Calculate group's total TDM
+    int maxTDM = 0;
+    for(unsigned int i=0;i<_net_V.size();i++){
+        _net_V[i]->calculateTDM();
+    }
+    for(unsigned int i=0;i<_group_V.size();i++){
+         _group_V[i]->calculateTDM();
+         int t = _group_V[i].getTDM();
+         if(t>maxTDM)maxTDM = t;
+
+    }
+
+    //Terminate condition : Compare with minimum answer. If we can't update  minimum answer more than N times, terminate global router.
+    if(maxTDM < minimumTDM){
+        //update minimum answer
+        minimumTDM = maxTDM;
+        for(unsigned int i=0;i<_net_V.size();i++){
+            _net_V[i]->updateMin_route();
+        }
+    }
+    else(maxTDM > minimumTDM){
+        terminateConditionCount++;
+        if(terminateConditionCount > 3)break;
+    }
+
+     //Update edge's weight for next iteration
+    for(unsigned int i=0;i<_edge_V.size();i++){
+        _edge_V[i]->updateWeight(iteration);
+    }
+
+
+     iteration++;
+ }
+
+
+
+}
+
+// cut a string from space
 size_t TDM::getToken(size_t pos, string& s, string& token){
     size_t begin = s.find_first_not_of(' ', pos);
     if(begin == string::npos){
@@ -89,5 +149,98 @@ size_t TDM::getToken(size_t pos, string& s, string& token){
     }
     size_t end = s.find_first_of(' ', begin);
     token = s.substr(begin, end - begin);
-    return end; 
+    return end;
+}
+
+//single source single target shortest path
+stack<FPGA*> TDM::Dijkstras(FPGA* source,FPGA* target,unsigned int num){
+    set<pIF> Q;
+    int maxI = numeric_limits<int>::max();
+    vector<int>d(num,maxI); //distance
+    vector<pFE> parent(num); //Record the parentId and edge of each FPGA after Dijkstras
+    d[source] = 0;
+    parent[source->getId()] = pFE(source,NULL);
+    Q.insert(pIF(d[source],source));
+
+    FPGA* a;
+    while(!Q.empty())
+    {
+        pIF top = *Q.begin();
+        Q.erase(Q.begin());
+        a = top.second;
+        if(a==target)break; //Find the target
+        else if(_pachcheck_V[a->getId()])break; // Find the steiner point
+
+        int w;
+        FPGA* b;
+        Edge* e;
+        for(unsigned int i=0; i<a->GetEdgeNum; i++){
+            b = a->GetconnectedFPGA(i);
+            e = a->GetEdge(i);
+            w = e.getWeight();
+            if(d[a->getId()] + w < d[b->getId()]){
+                if(d[b->getId()]!=maxI){
+                    Q.erase(Q.find(pIF(d[b->getId()], b)));
+                }
+                d[b->getId()] = d[a->getId()] + w;
+                parent[b.getId()] = pFE(a,e);
+                Q.insert(pIF(d[b->getId()],b));
+            }
+        }
+    }
+    stack<pFE> route;
+    route.push(pFE(a,NULL));
+    while(a != parent[a->getId()].first){
+        route.push(parent[a->getId()]);
+        a = parent[a->getId()].first;
+    }
+    return route;
+}
+
+//route all the nets by Dijkstras algorithm
+void TDM::local_router(){
+    for(unsigned int i=0; i < _net_V.size(); i++){
+        Net* n = _net_V[i];
+        _pathcheck_V.resize(_FPGA_V.size(),false);
+        n->initializeCur_route();
+        for(unsigned int j=0; j < n->GetSubnetNum; j++){
+            SubNet* sn = n->GetSubNet(i);
+            FPGA* source = sn->getSource();
+            FPGA* target = sn->getTarget();
+            if(_pathcheck_V[source.getId()] && !_pathcheck_V[target.getId()]){ // We can swap source and target in order to efficiently find steiner point
+                FPGA* temp = source;
+                source = target;
+                target = temp;
+            }
+            stack<FPGA*> route_S = Dijkstras(source,target,_FPGA_V.size());
+
+            FPGA* connectFPGA;
+            Edge* connectEdge;
+            while(!route_S.empty()){
+                pFE p = route_S.top();
+                route_S.pop();
+                connectFPGA = p.first;
+                connectEdge = p.second;
+                _pathcheck_V[connectFPGA.getId()] = true;
+                if(connectEdge!=NULL){
+                    connectEdge->addCongestion();
+                    n.addEdgetoCur_route(connectEdge);
+                }
+            }
+            if(!_pathcheck_V[target.getId()]){ // target is not connected
+                route_S = Dijkstras(target,source,_FPGA_V.size());
+                while(!route_S.empty()){
+                    pFE p = route_S.top();
+                    route_S.pop();
+                    connectFPGA = p.first;
+                    connectEdge = p.second;
+                    _pathcheck_V[connectFPGA.getId()] = true;
+                    if(connectEdge!=NULL){
+                        connectEdge->addCongestion();
+                        n.addEdgetoCur_route(connectEdge);
+                    }
+                }
+            }
+        }
+    }
 }
