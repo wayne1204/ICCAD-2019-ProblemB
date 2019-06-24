@@ -4,7 +4,7 @@
 #include <set>
 #include <utility>
 #include "component.h"
-
+#include "table.h"
 #define pIN pair<int,Net*>
 
 void FPGA::setConnection(Edge* e, FPGA* f){
@@ -24,7 +24,7 @@ void FPGA::showInfo(){
 void Net::calculateTDM(){
     _TDM = 0;
     for(unsigned int i=0; i<_cur_route.size();i++){
-        // _TDM += lookupTable[_cur_route[i]->getCongestion()][0]; //check lookuptable name
+        // _TDM += getValue(_cur_route[i]->getCongestion(), 0); //check lookuptable name
     }
 }
 
@@ -37,32 +37,33 @@ void Net::decomposition(){
     // construct MST
     queue<FPGA*> Q;
     Q.push(_source);
-    _source->setVisited();
+    _source->setVisited(true);
     while(!Q.empty()){
         FPGA* f = Q.front();
         Q.pop();
         for(int i = 0; i < f->getEdgeNum(); ++i){
             if(!f->getConnectedFPGA(i)->isVisited()){
                 Q.push(f->getConnectedFPGA(i));
-                f->getConnectedFPGA(i)->setParent(make_pair(f ,f->getEdge(i)));
-                f->getConnectedFPGA(i)->setVisited();
+                f->getConnectedFPGA(i)->setParent(f);
+                f->getConnectedFPGA(i)->setVisited(true);
             }
         }
     }
 
-    set<Edge*> subnets;
     int count = 0;
+    set<FPGA*> mst_set;
+    mst_set.insert(_source);
     for(int i = 0; i < _targets.size(); ++i){
         FPGA* f = _targets[i];
-        while(f->getParent().first != NULL){ 
-            Edge* e = f->getParent().second;
-            if(subnets.find(e) == subnets.end()){
-                subnets.insert(e);
-                SubNet* sb = new SubNet(count++, this, f->getParent().first, f);
-                _subnets.push_back(sb);
-            }
-            f = f->getParent().first;
+        while(f->getParent() != NULL){ 
+            if(mst_set.find(f->getParent()) != mst_set.end())
+                break;
+            f = f->getParent();
         }
+        mst_set.insert(_targets[i]);
+        SubNet* sb = new SubNet(count++, this, f->getParent(), _targets[i]);
+        // cout << f->getParent()->getId() << " " << f->getId() <<endl;
+        _subnets.push_back(sb);
     }
 }
 

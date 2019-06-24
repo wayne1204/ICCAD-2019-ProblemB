@@ -3,7 +3,7 @@ CFLAGS = -Wall -O2 -std=c++11
 # CFLAGS = -Wall -g -std=c++11 
 
 EXE = tdm
-OBJ = main.o tdm.o component.o
+OBJ = main.o tdm.o component.o table.o
 
 all:$(EXE)
 

@@ -4,6 +4,8 @@
 #include <vector>
 #include <fstream>
 #include <utility>
+#include <set>
+#include "table.h"
 
 #define pIF pair<int,FPGA*>
 #define pFE pair<FPGA*,Edge*>
@@ -22,15 +24,14 @@ public:
     FPGA(unsigned id){
         _uid = id;
         _visited = false;
-        pFE p(NULL, NULL);
-        _parent = p;
+        _parent = NULL;
     }
     unsigned getId() {return _uid;}
     // for decompostion
-    void setVisited() {_visited = true; }
+    void setVisited(bool b) {_visited = b; }
     bool isVisited() {return _visited; }
-    void setParent(pFE p) {_parent = p;}
-    pFE getParent() {return _parent;}
+    void setParent(FPGA* p) {_parent = p;}
+    FPGA* getParent() {return _parent;}
 
     void setConnection(Edge* e, FPGA* f);
     int getEdgeNum() {return _connection.size(); }
@@ -42,7 +43,7 @@ public:
 private:
     bool _visited;
     unsigned _uid;
-    pFE _parent;
+    FPGA* _parent;
     vector<pFE> _connection;
 };
 

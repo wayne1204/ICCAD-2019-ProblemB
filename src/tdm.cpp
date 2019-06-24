@@ -18,7 +18,7 @@ bool TDM::parseFile(const char* fname){
     if(!fs.is_open()){
         return false;
     }
-
+    cout << " [parsing] \n";
     for(int i = 0; i < 4; ++i){
         fs >> token;
         nums[i] = stoi(token);
@@ -76,12 +76,15 @@ bool TDM::parseFile(const char* fname){
         }
         _group_V.push_back(g);
     }
-    cout << "finish parsing! \n";
     return true;
 }
 
 void TDM::decomposeNet(){
+    cout << " [decomposing] \n";
     for(int i = 0; i < _net_V.size(); ++i){
+        for(int j = 0; j < _FPGA_V.size(); ++j){
+            _FPGA_V[j]->setVisited(false);
+        }
         _net_V[i]->decomposition();
     }
 }
