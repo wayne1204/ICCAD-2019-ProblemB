@@ -62,7 +62,8 @@ public:
     void updateWeight(int iteration);
     void addCongestion(){_congestion++;}
     void initializeCongestion(){_congestion = 0;}
-	void addNet(Net* n){_route.push_back(n);}
+    void distributeTDM(vector<bool>* calculated);
+    void addNet(Net* n){_route.push_back(n);}
 
 private:
     unsigned _uid;
@@ -83,8 +84,10 @@ public:
     void setTarget(FPGA* f) {_targets.push_back(f);}
     void addEdgetoCur_route(Edge* e){_cur_route.push_back(e);}
     void updateMin_route(){_min_route = _cur_route;}
+    void updateMin_TDM(){_min_TDM = _TDM;}
     void initializeCur_route(){_cur_route.clear();}
     int getTDM(){return _TDM;}
+    int getId(){return _uid;}
     void setTDM(int t){_TDM = t;}
     void incrementTDM(int i) {_TDM = _TDM + i; }
     void calculateTDM();
@@ -98,6 +101,7 @@ public:
 private:
     unsigned _uid;
     int _TDM;
+    int _min_TDM;
     FPGA* _source;
     NetGroup* _netgroup;
     vector<FPGA*> _targets;

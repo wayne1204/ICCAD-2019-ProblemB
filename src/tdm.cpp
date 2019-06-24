@@ -152,6 +152,52 @@ void TDM::global_router(){
     }
     iteration++;
  }
+
+ //phase 2
+
+    iteration = 0;
+    minimumTDM = numeric_limits<int>::max();
+    terminateConditionCount = 0;
+
+    while(true){
+
+        int maxTDM = 0;
+
+        vector<bool> calculated(_net_V.size(), false);
+        for(unsigned int i=0;i<_edge_V.size();i++){
+            _edge_V[i]->distributeTDM(&calculated);     //distribute 1 edge TDM to routed nets
+            //should sort?
+            // TODO: sort  
+            /*       sort
+            for(unsigned int i=0;i<_group_V.size();i++){
+                _group_V[i]->calculateTDM();
+            }
+            time consuming!!
+            */
+        }
+
+        for(unsigned int i=0;i<_group_V.size();i++){
+            _group_V[i]->calculateTDM();
+            int t = _group_V[i]->getTDM();
+            if(t>maxTDM)maxTDM = t;
+
+        }
+
+        if(maxTDM < minimumTDM){
+            //update minimum answer
+            minimumTDM = maxTDM;
+            for(unsigned int i=0;i<_net_V.size();i++){
+                _net_V[i]->updateMin_TDM();
+            }
+            terminateConditionCount = 0;
+        }
+        else{
+            terminateConditionCount++;
+            if(terminateConditionCount > 3)break;
+        }
+
+    }
+
 }
 
 // cut a string from space
@@ -227,7 +273,7 @@ void TDM::local_router(){
             FPGA* source = sn->getSource();
             FPGA* target = sn->getTarget();
             if(_pathcheck_V[source->getId()] && _pathcheck_V[target->getId()])continue;
-			else if(_pathcheck_V[source->getId()] && !_pathcheck_V[target->getId()]){ // We can swap source and target in order to efficiently find steiner point
+            else if(_pathcheck_V[source->getId()] && !_pathcheck_V[target->getId()]){ // We can swap source and target in order to efficiently find steiner point
                 FPGA* temp = source;
                 source = target;
                 target = temp;
@@ -245,7 +291,7 @@ void TDM::local_router(){
                 if(connectEdge!=NULL){
                     connectEdge->addCongestion();
                     n->addEdgetoCur_route(connectEdge);
-					connectEdge->addNet(n);
+                    connectEdge->addNet(n);
                 }
             }
             if(!_pathcheck_V[target->getId()]){ // target is not connected
@@ -259,7 +305,7 @@ void TDM::local_router(){
                     if(connectEdge!=NULL){
                         connectEdge->addCongestion();
                         n->addEdgetoCur_route(connectEdge);
-						connectEdge->addNet(n);
+                        connectEdge->addNet(n);
                     }
                 }
             }

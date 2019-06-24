@@ -5,6 +5,8 @@
 #include <utility>
 #include "component.h"
 
+#define pIN pair<int,Net*>
+
 void FPGA::setConnection(Edge* e, FPGA* f){
     _connection.push_back(make_pair(f,e));
 }
@@ -84,6 +86,39 @@ void NetGroup::calculateTDM(){
 }
 void Edge::updateWeight(int iteration){
     _weight = (_weight*iteration + _congestion)/(iteration+1);
+}
+
+void Edge::distributeTDM(vector<bool>* calculated){
+
+    set<pIN> sortedNet;
+    int rank = 0;
+    //insert
+    for(unsigned int i=0; i<_route.size();i++){
+
+        Net* nn = _route[i];
+        NetGroup* ng = nn->getNetGroup();    //TODO getNetGroup()??
+        int cost = ng->getTDM();
+        sortedNet.insert(pIN(cost,nn));
+    }
+
+    for (std::set<pIN>::iterator it=sortedNet.begin(); it!=sortedNet.end(); ++it){
+
+        Net* nn = it->second;
+        int id = nn->getId();
+        int tdm = 0;//lookuptable[_congestion][rank];
+
+        if(!calculated->at(id)){
+            nn->setTDM(tdm);
+        }
+        else{
+            tdm = nn->getTDM() + tdm;
+            nn->setTDM(tdm);
+        }
+
+        rank++;
+    }
+
+
 }
 
 
