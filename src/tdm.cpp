@@ -72,6 +72,7 @@ bool TDM::parseFile(const char* fname){
         while(begin != string::npos){
             begin = getToken(begin, line, token);
             g->addNet( _net_V[stoi(token)] );
+            _net_V[stoi(token)]->addGroup(g);
         }
         _group_V.push_back(g);
     }
@@ -165,19 +166,20 @@ size_t TDM::getToken(size_t pos, string& s, string& token){
     return end;
 }
 
-struct pIFcomp {
-  bool operator() (const pIF& lhs, const pIF& rhs) const
-  {return lhs.first < rhs.first;}
-};
+// struct pIFcomp {
+//   bool operator() (const pIF& lhs, const pIF& rhs) const
+//   {return lhs.first < rhs.first;}
+// };
+
 //single source single target shortest path
 stack<pFE> TDM::Dijkstras(FPGA* source,FPGA* target,unsigned int num){
-    set<pIF,pIFcomp> Q;
+    set<pIF> Q;
     int maxI = numeric_limits<int>::max();
     vector<int>d (num,maxI); //distance
     vector<pFE> parent(num); //Record the parentId and edge of each FPGA after Dijkstras
-    d[source] = 0;
+    d[source->getId()] = 0;
     parent[source->getId()] = pFE(source,NULL);
-    Q.insert(pIF(d[source],source));
+    Q.insert(pIF(d[source->getId()],source));
 
     FPGA* a;
     while(!Q.empty())
@@ -194,7 +196,7 @@ stack<pFE> TDM::Dijkstras(FPGA* source,FPGA* target,unsigned int num){
         for(unsigned int i=0; i<a->getEdgeNum(); i++){
             b = a->getConnectedFPGA(i);
             e = a->getEdge(i);
-            w = e.getWeight();
+            w = e->getWeight();
             if(d[a->getId()] + w < d[b->getId()]){
                 if(d[b->getId()]!=maxI){
                     Q.erase(Q.find(pIF(d[b->getId()], b)));

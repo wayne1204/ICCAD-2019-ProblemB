@@ -69,6 +69,7 @@ private:
     int _congestion;
     FPGA* _source;
     FPGA* _target;
+    vector<Net*> _route;
 };
 
 class Net
@@ -84,16 +85,20 @@ public:
     void initializeCur_route(){_cur_route.clear();}
     int getTDM(){return _TDM;}
     void setTDM(int t){_TDM = t;}
+    void incrementTDM(int i) {_TDM = _TDM + i; }
     void calculateTDM();
     void decomposition();
     int getSubnetNum() { return _subnets.size(); }
     SubNet* getSubNet(unsigned i) { return _subnets[i]; }
+    void addGroup(NetGroup* g) {_netgroup = g; }
+    NetGroup* getNetGroup() {return _netgroup; }
     void showInfo();
 
 private:
     unsigned _uid;
     int _TDM;
     FPGA* _source;
+    NetGroup* _netgroup;
     vector<FPGA*> _targets;
     vector<SubNet*> _subnets;     //vector for Subnet
     vector<Edge*> _cur_route;
@@ -131,6 +136,7 @@ public:
         _TDM = 0;
     }
     void addNet(Net* n) {_nets.push_back(n);}
+    void incrementTDM(int i) {_TDM = _TDM + i; }
     int getTDM(){return _TDM;}
     void calculateTDM();
 private:

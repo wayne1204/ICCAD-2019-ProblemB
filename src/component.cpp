@@ -22,7 +22,7 @@ void FPGA::showInfo(){
 void Net::calculateTDM(){
     _TDM = 0;
     for(unsigned int i=0; i<_cur_route.size();i++){
-        // _TDM += lookupTable[_cur_route[i]->getCongestion()]; //check lookuptable name
+        // _TDM += lookupTable[_cur_route[i]->getCongestion()][0]; //check lookuptable name
     }
 }
 
