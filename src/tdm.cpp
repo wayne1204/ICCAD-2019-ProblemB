@@ -226,7 +226,8 @@ void TDM::local_router(){
             SubNet* sn = n->getSubNet(i);
             FPGA* source = sn->getSource();
             FPGA* target = sn->getTarget();
-            if(_pathcheck_V[source->getId()] && !_pathcheck_V[target->getId()]){ // We can swap source and target in order to efficiently find steiner point
+            if(_pathcheck_V[source->getId()] && _pathcheck_V[target->getId()])continue;
+			else if(_pathcheck_V[source->getId()] && !_pathcheck_V[target->getId()]){ // We can swap source and target in order to efficiently find steiner point
                 FPGA* temp = source;
                 source = target;
                 target = temp;
@@ -244,6 +245,7 @@ void TDM::local_router(){
                 if(connectEdge!=NULL){
                     connectEdge->addCongestion();
                     n->addEdgetoCur_route(connectEdge);
+					connectEdge->addNet(n);
                 }
             }
             if(!_pathcheck_V[target->getId()]){ // target is not connected
@@ -257,6 +259,7 @@ void TDM::local_router(){
                     if(connectEdge!=NULL){
                         connectEdge->addCongestion();
                         n->addEdgetoCur_route(connectEdge);
+						connectEdge->addNet(n);
                     }
                 }
             }

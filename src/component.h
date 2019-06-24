@@ -62,6 +62,7 @@ public:
     void updateWeight(int iteration);
     void addCongestion(){_congestion++;}
     void initializeCongestion(){_congestion = 0;}
+	void addNet(Net* n){_route.push_back(n);}
 
 private:
     unsigned _uid;
