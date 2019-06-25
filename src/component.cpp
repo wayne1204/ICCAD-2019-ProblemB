@@ -4,7 +4,6 @@
 #include <set>
 #include <utility>
 #include "component.h"
-#include "table.h"
 #define pIN pair<int,Net*>
 
 void FPGA::setConnection(Edge* e, FPGA* f){
@@ -24,7 +23,7 @@ void FPGA::showInfo(){
 void Net::calculateTDM(){
     _TDM = 0;
     for(unsigned int i=0; i<_cur_route.size();i++){
-        // _TDM += getValue(_cur_route[i]->getCongestion(), 0); //check lookuptable name
+         _TDM += _cur_route[i]->getMaxTableValue();
     }
 }
 
@@ -55,7 +54,7 @@ void Net::decomposition(){
     mst_set.insert(_source);
     for(int i = 0; i < _targets.size(); ++i){
         FPGA* f = _targets[i];
-        while(f->getParent() != NULL){ 
+        while(f->getParent() != NULL){
             if(mst_set.find(f->getParent()) != mst_set.end())
                 break;
             f = f->getParent();
@@ -86,7 +85,9 @@ void NetGroup::calculateTDM(){
 
 }
 void Edge::updateWeight(int iteration){
-    _weight = (_weight*iteration + _congestion)/(iteration+1);
+    _weight = (_weight*(float)iteration + (float)_congestion)/((float)iteration+1);
+    if(_weight <1)_weight  = 1;
+    //cout<<"Edge "<<this->getId()<<" : "<<_weight<<endl;
 }
 
 void Edge::distributeTDM(){
@@ -106,8 +107,8 @@ void Edge::distributeTDM(){
 
         Net* nn = it->second;
         NetGroup* ng = nn->getNetGroup();
-        int id = nn->getId();
-        int new_tdm = 0;//lookuptable[_congestion][rank];
+        //int id = nn->getId();
+        int new_tdm = _T->getValue(_congestion,rank);//lookuptable[_congestion][rank];
         int prev_tdm = nn->getedgeTDM(_uid);
         nn->setedgeTDM(_uid,new_tdm);
 
@@ -118,6 +119,15 @@ void Edge::distributeTDM(){
         rank++;
     }
 
+
+}
+void Net::setMin_routetoEdge(){
+    Edge* e;
+    for(int i=0;i<_min_route.size();i++){
+        e = _min_route[i];
+        e->addCongestion();
+        e->addNet(this);
+    }
 
 }
 

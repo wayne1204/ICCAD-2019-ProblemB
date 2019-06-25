@@ -1,4 +1,5 @@
 #include <fstream>
+#include <iostream>
 #include <vector>
 #include "table.h"
 using namespace std;
@@ -9,12 +10,13 @@ void Table::constructTable(const char* fname){
     fstream fs("lookup_table.txt", ios::in);
     string line, token;
     vector<int> zero;
+    zero.push_back(0);
     _lookUpTable.push_back(zero);
 
     for(int i = 0; i < 1000; ++i){
         getline(fs, line);
         vector<int> vec;
-        vec.resize(i+1);
+        vec.reserve(i+1);
         size_t begin = 0;
         while(begin != string::npos){
             begin = getToken(begin, line, token);

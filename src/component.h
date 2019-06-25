@@ -9,6 +9,7 @@
 #include "table.h"
 
 #define pIF pair<int,FPGA*>
+#define pDF pair<float,FPGA*>
 #define pFE pair<FPGA*,Edge*>
 
 using namespace std;
@@ -52,26 +53,29 @@ private:
 class Edge
 {
 public:
-    Edge(unsigned id){
+    Edge(unsigned id ,Table* t){
         _uid = id;
-        _weight = 1;
+        _weight = 1.0;
         _congestion = 0;
+        _T = t;
     }
     void setVertex(FPGA* f1, FPGA* f2) {_source = f1; _target = f2;}
     unsigned getId() {return _uid;}
-    int getWeight(){return _weight;}
+    float getWeight(){return _weight;}
     int getCongestion(){return _congestion;}
     void updateWeight(int iteration);
     void addCongestion(){_congestion++;}
     void initializeCongestion(){_congestion = 0;}
     void distributeTDM();
     void addNet(Net* n){_route.push_back(n);}
-    void construcTable(){_T.constructTable();}
+    //void construcTable(const char* fname){_T->constructTable(fname);}
+    int getMaxTableValue(){return _T->getValue(_congestion,0);}
 
 private:
-    static Table _T;
+    //static Table _T;
+    Table* _T;
     unsigned _uid;
-    int _weight;
+    float _weight;
     int _congestion;
     FPGA* _source;
     FPGA* _target;
@@ -88,12 +92,13 @@ public:
     void setTarget(FPGA* f) {_targets.push_back(f);}
     void addEdgetoCur_route(Edge* e){_cur_route.push_back(e);}
     void updateMin_route(){_min_route = _cur_route;}
-    void updateMin_edge_TDM(){_min_edge_tdm = _edge_tdm;}
-    void updateMin_TDM(){_min_TDM = _TDM;}
+    void updateMin_edge_TDM(){Min_edge_tdm = _edge_tdm;}
+    //void updateMin_TDM(){_min_TDM = _TDM;}
     void initializeCur_route(){_cur_route.clear();}
     int getTDM(){return _TDM;}
     int getId(){return _uid;}
     int getedgeTDM(int i){return _edge_tdm[i];}
+    int getMin_routeNum(){return _min_route.size();}
     void setedgeTDM(int i,int c){_edge_tdm[i] = c;}
     void setTDM(int t){_TDM = t;}
     void incrementTDM(int i) {_TDM = _TDM + i; }
@@ -104,18 +109,20 @@ public:
     void addGroup(NetGroup* g) {_netgroup = g; }
     NetGroup* getNetGroup() {return _netgroup; }
     void showInfo();
+    void setMin_routetoEdge();
+    map<int,int> Min_edge_tdm; //edgeID -> TDM
 
 private:
     unsigned _uid;
     int _TDM;
-    int _min_TDM;
+    //int _min_TDM;
     FPGA* _source;
     NetGroup* _netgroup;
     vector<FPGA*> _targets;
     vector<SubNet*> _subnets;     //vector for Subnet
     vector<Edge*> _cur_route;
     vector<Edge*> _min_route;
-    map<int,int> _min_edge_tdm; //edgeID -> TDM
+    //map<int,int> _min_edge_tdm; //edgeID -> TDM
     map<int,int> _edge_tdm;     //edgeID -> TDM
 };
 
@@ -139,7 +146,7 @@ private:
     Net* _net;
     FPGA* _source;
     FPGA* _target;
-    
+
 };
 
 class NetGroup

@@ -11,14 +11,17 @@ int main(int argc, char** argv){
         return -1;
     }
     TDM tdm;
-    Table table;
-    
+    Table* table = new Table;
+    table->constructTable("lookput_table.txt");
+    tdm.setTable(table);
+
     if(!tdm.parseFile(argv[1])){
         cout << "file \"" << argv[1] << "\" not found!\n";
         return -1;
     }
-    table.constructTable("lookput_table.txt");
     tdm.decomposeNet();
     tdm.showStatus();
+    tdm.global_router();
+    tdm.outpurFile(argv[2]);
     return 0;
 }

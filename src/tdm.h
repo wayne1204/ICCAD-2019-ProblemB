@@ -12,9 +12,11 @@ class TDM
 {
     public:
     bool parseFile(const char* fname);
+    bool outpurFile(const char* fname);
     void showStatus();
     void decomposeNet();
     void global_router();
+    void setTable(Table* t){_T = t;}
 
     private:
     size_t getToken(size_t pos, string& s, string& token);
@@ -25,6 +27,7 @@ class TDM
     vector<Net*> _net_V;
     vector<NetGroup*> _group_V;
     vector<bool> _pathcheck_V; // for each net to check whether the FPGA is connected or not, then we can stop Dijkstras
+    Table* _T;
 };
 
 #endif
