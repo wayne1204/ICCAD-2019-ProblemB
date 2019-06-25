@@ -166,24 +166,15 @@ void TDM::global_router(){
 
         int maxTDM = 0;
 
-        vector<bool> calculated(_net_V.size(), false);
         for(unsigned int i=0;i<_edge_V.size();i++){
-            _edge_V[i]->distributeTDM(&calculated);     //distribute 1 edge TDM to routed nets
-            //should sort?
-            // TODO: sort  
-            /*       sort
-            for(unsigned int i=0;i<_group_V.size();i++){
-                _group_V[i]->calculateTDM();
-            }
-            time consuming!!
-            */
+            _edge_V[i]->distributeTDM();     //distribute 1 edge TDM to routed nets
         }
 
         for(unsigned int i=0;i<_group_V.size();i++){
-            _group_V[i]->calculateTDM();
             int t = _group_V[i]->getTDM();
-            if(t>maxTDM)maxTDM = t;
-
+            if(t>maxTDM){
+                maxTDM = t;
+            }
         }
 
         if(maxTDM < minimumTDM){
@@ -191,12 +182,15 @@ void TDM::global_router(){
             minimumTDM = maxTDM;
             for(unsigned int i=0;i<_net_V.size();i++){
                 _net_V[i]->updateMin_TDM();
+                _net_V[i]->updateMin_edge_TDM();
             }
             terminateConditionCount = 0;
         }
         else{
             terminateConditionCount++;
-            if(terminateConditionCount > 3)break;
+            if(terminateConditionCount > 3){
+                break;
+            }
         }
 
     }

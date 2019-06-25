@@ -89,7 +89,7 @@ void Edge::updateWeight(int iteration){
     _weight = (_weight*iteration + _congestion)/(iteration+1);
 }
 
-void Edge::distributeTDM(vector<bool>* calculated){
+void Edge::distributeTDM(){
 
     set<pIN> sortedNet;
     int rank = 0;
@@ -105,16 +105,15 @@ void Edge::distributeTDM(vector<bool>* calculated){
     for (std::set<pIN>::iterator it=sortedNet.begin(); it!=sortedNet.end(); ++it){
 
         Net* nn = it->second;
+        NetGroup* ng = nn->getNetGroup();
         int id = nn->getId();
-        int tdm = 0;//lookuptable[_congestion][rank];
+        int new_tdm = 0;//lookuptable[_congestion][rank];
+        int prev_tdm = nn->getedgeTDM(_uid);
+        nn->setedgeTDM(_uid,new_tdm);
 
-        if(!calculated->at(id)){
-            nn->setTDM(tdm);
-        }
-        else{
-            tdm = nn->getTDM() + tdm;
-            nn->setTDM(tdm);
-        }
+        //incerment
+        nn->incrementTDM(new_tdm - prev_tdm);
+        ng->incrementTDM(new_tdm - prev_tdm);
 
         rank++;
     }

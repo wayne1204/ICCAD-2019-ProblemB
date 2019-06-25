@@ -5,6 +5,7 @@
 #include <fstream>
 #include <utility>
 #include <set>
+#include <map>
 #include "table.h"
 
 #define pIF pair<int,FPGA*>
@@ -63,7 +64,7 @@ public:
     void updateWeight(int iteration);
     void addCongestion(){_congestion++;}
     void initializeCongestion(){_congestion = 0;}
-    void distributeTDM(vector<bool>* calculated);
+    void distributeTDM();
     void addNet(Net* n){_route.push_back(n);}
 
 private:
@@ -85,10 +86,13 @@ public:
     void setTarget(FPGA* f) {_targets.push_back(f);}
     void addEdgetoCur_route(Edge* e){_cur_route.push_back(e);}
     void updateMin_route(){_min_route = _cur_route;}
+    void updateMin_edge_TDM(){_min_edge_tdm = _edge_tdm;}
     void updateMin_TDM(){_min_TDM = _TDM;}
     void initializeCur_route(){_cur_route.clear();}
     int getTDM(){return _TDM;}
     int getId(){return _uid;}
+    int getedgeTDM(int i){return _edge_tdm[i];}
+    void setedgeTDM(int i,int c){_edge_tdm[i] = c;}
     void setTDM(int t){_TDM = t;}
     void incrementTDM(int i) {_TDM = _TDM + i; }
     void calculateTDM();
@@ -109,6 +113,8 @@ private:
     vector<SubNet*> _subnets;     //vector for Subnet
     vector<Edge*> _cur_route;
     vector<Edge*> _min_route;
+    map<int,int> _min_edge_tdm; //edgeID -> TDM
+    map<int,int> _edge_tdm;     //edgeID -> TDM
 };
 
 class SubNet
