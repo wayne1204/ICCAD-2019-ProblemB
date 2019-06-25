@@ -66,8 +66,10 @@ public:
     void initializeCongestion(){_congestion = 0;}
     void distributeTDM();
     void addNet(Net* n){_route.push_back(n);}
+    void construcTable(){_T.constructTable();}
 
 private:
+    static Table _T;
     unsigned _uid;
     int _weight;
     int _congestion;
