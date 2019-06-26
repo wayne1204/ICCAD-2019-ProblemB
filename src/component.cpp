@@ -4,7 +4,6 @@
 #include <set>
 #include <utility>
 #include "component.h"
-#define pIN pair<int,Net*>
 
 void FPGA::setConnection(Edge* e, FPGA* f){
     _connection.push_back(make_pair(f,e));

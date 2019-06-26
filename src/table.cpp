@@ -13,10 +13,10 @@ void Table::constructTable(const char* fname){
     zero.push_back(0);
     _lookUpTable.push_back(zero);
 
-    for(int i = 0; i < 1000; ++i){
-        getline(fs, line);
+    int cnt = 0;
+    while(getline(fs, line)){
         vector<int> vec;
-        vec.reserve(i+1);
+        vec.reserve(++cnt);
         size_t begin = 0;
         while(begin != string::npos){
             begin = getToken(begin, line, token);
@@ -31,6 +31,12 @@ void Table::constructTable(const char* fname){
     }
 }
 
+int Table::getValue (int c, int rank){
+    if(c > 10000){
+        return c % 2 ? c+1 : c;
+    }
+    return _lookUpTable[c][rank];
+}
 
 size_t Table::getToken(size_t pos, string& s, string& token){
     size_t begin = s.find_first_not_of(' ', pos);

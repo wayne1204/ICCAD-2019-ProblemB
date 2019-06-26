@@ -11,6 +11,8 @@
 #define pIF pair<int,FPGA*>
 #define pDF pair<float,FPGA*>
 #define pFE pair<FPGA*,Edge*>
+#define pIN pair<int,Net*>
+#define verbose 0
 
 using namespace std;
 

@@ -24,7 +24,6 @@ bool TDM::parseFile(const char* fname){
         nums[i] = stoi(token);
     }
     getline(fs, line);
-    cout << line <<endl;;
 
     // fpga
     _FPGA_V.reserve(nums[0]);
@@ -118,13 +117,15 @@ void TDM::showStatus(){
     cout <<" #net groups | " << _group_V.size() << endl;
 
     cout <<endl;
-    for(int i = 0; i < _FPGA_V.size(); ++i){
+    if(verbose){
+        for(int i = 0; i < _FPGA_V.size(); ++i){
         _FPGA_V[i]->showInfo();
     }
 
-    cout <<endl;
-    for(int i = 0; i < _net_V.size(); ++i){
-        _net_V[i]->showInfo();
+        cout <<endl;
+        for(int i = 0; i < _net_V.size(); ++i){
+            _net_V[i]->showInfo();
+        }
     }
 }
 
@@ -151,7 +152,7 @@ void TDM::global_router(){
     int maxTDM = 0;
     for(unsigned int i=0;i<_net_V.size();i++){
         _net_V[i]->calculateTDM();
-        //cout<<"Net "<<_net_V[i]->getId()<<" phase1 TDM = "<<_net_V[i]->getTDM()<<endl;
+        // cout<<"Net "<<_net_V[i]->getId()<<" phase1 TDM = "<<_net_V[i]->getTDM()<<endl;
     }
     for(unsigned int i=0;i<_group_V.size();i++){
          _group_V[i]->calculateTDM();
@@ -302,7 +303,7 @@ void TDM::local_router(){
         _pathcheck_V.clear();
         _pathcheck_V.resize(_FPGA_V.size(),false);
         n->initializeCur_route();
-        cout<<"Net "<<n->getId()<<endl;
+        // cout<<"Net "<<n->getId()<<endl;
         for(unsigned int j=0; j < n->getSubnetNum(); j++){
             SubNet* sn = n->getSubNet(j);
             FPGA* source = sn->getSource();
@@ -327,7 +328,7 @@ void TDM::local_router(){
                     connectEdge->addCongestion();
                     n->addEdgetoCur_route(connectEdge);
                     //connectEdge->addNet(n);
-                    cout<<connectEdge->getId()<<" "<<connectEdge->getCongestion()<<endl;
+                    // cout<<connectEdge->getId()<<" "<<connectEdge->getCongestion()<<endl;
                 }
             }
             if(!_pathcheck_V[target->getId()]){ // target is not connected

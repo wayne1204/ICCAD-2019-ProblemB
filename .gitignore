@@ -1,8 +1,10 @@
 .vscode
 .DS_Store
 input/synopsys*
+output/*
 
 tdm
 *.o
 *.py
 *.out
+*.pdf

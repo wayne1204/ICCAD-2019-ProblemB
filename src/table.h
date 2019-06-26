@@ -6,11 +6,10 @@ using namespace std;
 class Table{
 public:
     void constructTable(const char* fname);
-     int getValue (int c, int rank) {return _lookUpTable[c][rank]; }
-
+     int getValue (int c, int rank);
 private:
     size_t getToken(size_t pos, string& s, string& token);
-     vector<vector<int> > _lookUpTable;
+    vector<vector<int> > _lookUpTable;
 };
 
 #endif
