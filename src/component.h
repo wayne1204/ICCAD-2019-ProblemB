@@ -7,6 +7,7 @@
 #include <set>
 #include <map>
 #include "table.h"
+#include "math.h"
 
 #define pIF pair<int,FPGA*>
 #define pDF pair<float,FPGA*>
@@ -61,9 +62,10 @@ public:
         _congestion = 0;
         _T = t;
     }
+    static float _AvgWeight;
     void setVertex(FPGA* f1, FPGA* f2) {_source = f1; _target = f2;}
     unsigned getId() {return _uid;}
-    float getWeight(){return _weight;}
+    float getWeight(){return _weight+pow(2,_congestion/_AvgWeight);}
     int getCongestion(){return _congestion;}
     void updateWeight(int iteration);
     void addCongestion(){_congestion++;}

@@ -2,8 +2,12 @@
 #include <iostream>
 #include <queue>
 #include <set>
+#include "math.h"
 #include <utility>
 #include "component.h"
+
+
+float Edge::_AvgWeight = 0.0;
 
 void FPGA::setConnection(Edge* e, FPGA* f){
     _connection.push_back(make_pair(f,e));
@@ -84,7 +88,7 @@ void NetGroup::calculateTDM(){
 
 }
 void Edge::updateWeight(int iteration){
-    _weight = (_weight*(float)iteration + (float)_congestion)/((float)iteration+1);
+    _weight = (_weight*(float)iteration + pow(2,(float)_congestion/_AvgWeight))/((float)iteration+1);
     if(_weight <1)_weight  = 1;
     //cout<<"Edge "<<this->getId()<<" : "<<_weight<<endl;
 }
@@ -97,7 +101,7 @@ void Edge::distributeTDM(){
     for(unsigned int i=0; i<_route.size();i++){
 
         Net* nn = _route[i];
-        NetGroup* ng = nn->getNetGroup();    //TODO getNetGroup()??
+        NetGroup* ng = nn->getNetGroup();    
         int cost = ng->getTDM();
         sortedNet.insert(pIN(cost,nn));
     }
