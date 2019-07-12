@@ -55,7 +55,7 @@ void Net::decomposition(){
     int count = 0;
     set<FPGA*> mst_set;
     mst_set.insert(_source);
-    for(int i = 0; i < _targets.size(); ++i){
+    for(unsigned int i = 0; i < _targets.size(); ++i){
         FPGA* f = _targets[i];
         while(f->getParent() != NULL){
             if(mst_set.find(f->getParent()) != mst_set.end())
@@ -126,7 +126,7 @@ void Edge::distributeTDM(){
 }
 void Net::setMin_routetoEdge(){
     Edge* e;
-    for(int i=0;i<_min_route.size();i++){
+    for(unsigned int i=0;i<_min_route.size();i++){
         e = _min_route[i];
         e->addCongestion();
         e->addNet(this);

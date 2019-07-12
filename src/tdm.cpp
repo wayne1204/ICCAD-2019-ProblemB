@@ -81,7 +81,7 @@ bool TDM::parseFile(const char* fname){
 }
 
 //output file
-bool TDM::outpurFile(const char* fname){
+bool TDM::outputFile(const char* fname){
     fstream fs(fname, ios::out);
 
     if(!fs.is_open()){
@@ -103,8 +103,8 @@ bool TDM::outpurFile(const char* fname){
 
 void TDM::decomposeNet(){
     cout << " [decomposing] \n";
-    for(int i = 0; i < _net_V.size(); ++i){
-        for(int j = 0; j < _FPGA_V.size(); ++j){
+    for(unsigned int i = 0; i < _net_V.size(); ++i){
+        for(unsigned int j = 0; j < _FPGA_V.size(); ++j){
             _FPGA_V[j]->setVisited(false);
         }
         _net_V[i]->decomposition();
@@ -120,12 +120,12 @@ void TDM::showStatus(){
 
     cout <<endl;
     if(verbose){
-        for(int i = 0; i < _FPGA_V.size(); ++i){
+        for(unsigned int i = 0; i < _FPGA_V.size(); ++i){
         _FPGA_V[i]->showInfo();
     }
 
         cout <<endl;
-        for(int i = 0; i < _net_V.size(); ++i){
+        for(unsigned int i = 0; i < _net_V.size(); ++i){
             _net_V[i]->showInfo();
         }
     }
@@ -145,21 +145,23 @@ void TDM::global_router(){
     //Initialize Edge's congestion to zero every iteration
     for(unsigned int i=0;i<_edge_V.size();i++){
         _edge_V[i]->initializeCongestion();
+        _edge_V[i]->resetNET();
     }
 
     //Use shortest path algorithm to route all nets
     local_router();
 
     //Calculate group's total TDM
-    int maxTDM = 0;
-    for(unsigned int i=0;i<_net_V.size();i++){
-        _net_V[i]->calculateTDM();
-        // cout<<"Net "<<_net_V[i]->getId()<<" phase1 TDM = "<<_net_V[i]->getTDM()<<endl;
+
+    for(unsigned int i=0;i<_edge_V.size();i++){
+        _edge_V[i]->distributeTDM();     
     }
+
+    int maxTDM = 0;
+
     for(unsigned int i=0;i<_group_V.size();i++){
-         _group_V[i]->calculateTDM();
-         int t = _group_V[i]->getTDM();
-         if(t>maxTDM)maxTDM = t;
+        int t = _group_V[i]->getTDM();
+        if(t>maxTDM)maxTDM = t;
 
     }
 
@@ -169,6 +171,7 @@ void TDM::global_router(){
         minimumTDM = maxTDM;
         for(unsigned int i=0;i<_net_V.size();i++){
             _net_V[i]->updateMin_route();
+            _net_V[i]->updateMin_edge_TDM();
         }
         terminateConditionCount = 0;
     }
@@ -191,48 +194,6 @@ void TDM::global_router(){
     for(unsigned int i=0;i<_net_V.size();i++){
         _net_V[i]->setMin_routetoEdge();
     }
-
- //phase 2
-
-    iteration = 0;
-    minimumTDM = numeric_limits<int>::max();
-    terminateConditionCount = 0;
-
-    while(true){
-
-        int maxTDM = 0;
-
-        for(unsigned int i=0;i<_edge_V.size();i++){
-            _edge_V[i]->distributeTDM();     //distribute 1 edge TDM to routed nets
-        }
-
-        for(unsigned int i=0;i<_group_V.size();i++){
-            int t = _group_V[i]->getTDM();
-            if(t>maxTDM){
-                maxTDM = t;
-            }
-        }
-
-        if(maxTDM < minimumTDM){
-            //update minimum answer
-            minimumTDM = maxTDM;
-            for(unsigned int i=0;i<_net_V.size();i++){
-                //_net_V[i]->updateMin_TDM();
-                _net_V[i]->updateMin_edge_TDM();
-            }
-            terminateConditionCount = 0;
-        }
-        else{
-            terminateConditionCount++;
-            if(terminateConditionCount > 3){
-                break;
-            }
-        }
-
-        iteration++;
-
-    }
-    cout<<"phase2 use "<<iteration<<" iteration"<<endl;
 
 }
 
@@ -263,7 +224,7 @@ stack<pFE> TDM::Dijkstras(FPGA* source,FPGA* target,unsigned int num){
     parent[source->getId()] = pFE(source,NULL);
     Q.insert(pDF(d[source->getId()],source));
 
-    FPGA* a;
+    FPGA* a = NULL;
     while(!Q.empty())
     {
         pIF top = *Q.begin();
@@ -275,7 +236,7 @@ stack<pFE> TDM::Dijkstras(FPGA* source,FPGA* target,unsigned int num){
         float w;
         FPGA* b;
         Edge* e;
-        for(unsigned int i=0; i<a->getEdgeNum(); i++){
+        for(int i=0; i<a->getEdgeNum(); i++){
             b = a->getConnectedFPGA(i);
             e = a->getEdge(i);
             w = e->getWeight();
@@ -306,7 +267,7 @@ void TDM::local_router(){
         _pathcheck_V.resize(_FPGA_V.size(),false);
         n->initializeCur_route();
         // cout<<"Net "<<n->getId()<<endl;
-        for(unsigned int j=0; j < n->getSubnetNum(); j++){
+        for(int j=0; j < n->getSubnetNum(); j++){
             SubNet* sn = n->getSubNet(j);
             FPGA* source = sn->getSource();
             FPGA* target = sn->getTarget();
@@ -329,7 +290,7 @@ void TDM::local_router(){
                 if(connectEdge!=NULL){
                     connectEdge->addCongestion();
                     n->addEdgetoCur_route(connectEdge);
-                    //connectEdge->addNet(n);
+                    connectEdge->addNet(n);
                     // cout<<connectEdge->getId()<<" "<<connectEdge->getCongestion()<<endl;
                 }
             }
@@ -344,7 +305,7 @@ void TDM::local_router(){
                     if(connectEdge!=NULL){
                         connectEdge->addCongestion();
                         n->addEdgetoCur_route(connectEdge);
-                        //connectEdge->addNet(n);
+                        connectEdge->addNet(n);
                     }
                 }
             }

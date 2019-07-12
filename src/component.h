@@ -70,6 +70,7 @@ public:
     void updateWeight(int iteration);
     void addCongestion(){_congestion++;}
     void initializeCongestion(){_congestion = 0;}
+    void resetNET(){_route.clear();}
     void distributeTDM();
     void addNet(Net* n){_route.push_back(n);}
     //void construcTable(const char* fname){_T->constructTable(fname);}
@@ -121,7 +122,7 @@ private:
     int _TDM;
     //int _min_TDM;
     FPGA* _source;
-    NetGroup* _netgroup;
+    NetGroup* _netgroup;	//TODO can belong to different NetGroup
     vector<FPGA*> _targets;
     vector<SubNet*> _subnets;     //vector for Subnet
     vector<Edge*> _cur_route;

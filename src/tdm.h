@@ -12,7 +12,7 @@ class TDM
 {
     public:
     bool parseFile(const char* fname);
-    bool outpurFile(const char* fname);
+    bool outputFile(const char* fname);
     void showStatus();
     void decomposeNet();
     void global_router();
