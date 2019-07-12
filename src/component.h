@@ -66,7 +66,7 @@ public:
     void setVertex(FPGA* f1, FPGA* f2) {_source = f1; _target = f2;}
     unsigned getId() {return _uid;}
     float getWeight(){return _weight+pow(2,_congestion/_AvgWeight);}
-    int getCongestion(){return _congestion;}
+    // int getCongestion(){return _congestion;}
     void updateWeight(int iteration);
     void addCongestion(){_congestion++;}
     void initializeCongestion(){_congestion = 0;}
