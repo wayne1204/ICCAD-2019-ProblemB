@@ -5,7 +5,7 @@
 #include "math.h"
 #include <utility>
 #include "component.h"
-
+#include <cassert>
 
 float Edge::_AvgWeight = 0.0;
 
@@ -95,35 +95,38 @@ void Edge::updateWeight(int iteration){
 
 void Edge::distributeTDM(){
 
-    set<pIN> sortedNet;
+    multiset<pIN> sortedNet;
     int rank = 0;
     //insert
-    for(unsigned int i=0; i<_route.size();i++){
-
+    for(unsigned int i = 0; i < _route.size(); i++){
         Net* nn = _route[i];
-        NetGroup* ng = nn->getNetGroup();    
-        int cost = ng->getTDM();
-        sortedNet.insert(pIN(cost,nn));
+        for(int j = 0; j < nn->getGroupSize(); ++j){
+            NetGroup* ng = nn->getNetGroup(j);    
+            int cost = ng->getTDM();
+            sortedNet.insert(pIN(cost,nn));
+        }
     }
 
-    for (std::set<pIN>::iterator it=sortedNet.begin(); it!=sortedNet.end(); ++it){
-
+    for (auto it=sortedNet.begin(); it!=sortedNet.end(); ++it){
         Net* nn = it->second;
-        NetGroup* ng = nn->getNetGroup();
-        //int id = nn->getId();
-        int new_tdm = _T->getValue(_congestion,rank);//lookuptable[_congestion][rank];
-        int prev_tdm = nn->getedgeTDM(_uid);
-        nn->setedgeTDM(_uid,new_tdm);
+        for(int j = 0; j < nn->getGroupSize(); ++j){
+            NetGroup* ng = nn->getNetGroup(0);
+            //int id = nn->getId();
+            int new_tdm = _T->getValue(_congestion,rank);//lookuptable[_congestion][rank];
+            int prev_tdm = nn->getedgeTDM(_uid);
+            // if(prev_tdm < 0){
+                // cout <<  " net"<< nn->getId() << " group"<<j <<" "<< prev_tdm << endl;
+            // }
+            nn->setedgeTDM(_uid,new_tdm);
 
-        //incerment
-        nn->incrementTDM(new_tdm - prev_tdm);
-        ng->incrementTDM(new_tdm - prev_tdm);
-
-        rank++;
+            //incerment
+            nn->incrementTDM(new_tdm - prev_tdm);
+            ng->incrementTDM(new_tdm - prev_tdm);
+            rank++;
+        }
     }
-
-
 }
+
 void Net::setMin_routetoEdge(){
     Edge* e;
     for(unsigned int i=0;i<_min_route.size();i++){

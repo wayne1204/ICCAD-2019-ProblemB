@@ -111,8 +111,9 @@ public:
     void decomposition();
     int getSubnetNum() { return _subnets.size(); }
     SubNet* getSubNet(unsigned i) { return _subnets[i]; }
-    void addGroup(NetGroup* g) {_netgroup = g; }
-    NetGroup* getNetGroup() {return _netgroup; }
+    void addGroup(NetGroup* g) {_netgroup.push_back(g); }
+    NetGroup* getNetGroup(unsigned i) {return _netgroup[i]; }
+    int getGroupSize() {return _netgroup.size();}
     void showInfo();
     void setMin_routetoEdge();
     map<int,int> Min_edge_tdm; //edgeID -> TDM
@@ -122,7 +123,7 @@ private:
     int _TDM;
     //int _min_TDM;
     FPGA* _source;
-    NetGroup* _netgroup;	//TODO can belong to different NetGroup
+    vector<NetGroup*> _netgroup;	//TODO can belong to different NetGroup
     vector<FPGA*> _targets;
     vector<SubNet*> _subnets;     //vector for Subnet
     vector<Edge*> _cur_route;
@@ -164,6 +165,7 @@ public:
     void addNet(Net* n) {_nets.push_back(n);}
     void incrementTDM(int i) {_TDM = _TDM + i; }
     int getTDM(){return _TDM;}
+    unsigned getId() {return  _uid;}
     void calculateTDM();
 private:
     unsigned _uid;

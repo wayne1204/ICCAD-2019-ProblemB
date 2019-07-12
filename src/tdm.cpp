@@ -121,8 +121,8 @@ void TDM::showStatus(){
     cout <<endl;
     if(verbose){
         for(unsigned int i = 0; i < _FPGA_V.size(); ++i){
-        _FPGA_V[i]->showInfo();
-    }
+            _FPGA_V[i]->showInfo();
+        }
 
         cout <<endl;
         for(unsigned int i = 0; i < _net_V.size(); ++i){
@@ -152,7 +152,6 @@ void TDM::global_router(){
     local_router();
 
     //Calculate group's total TDM
-
     for(unsigned int i=0;i<_edge_V.size();i++){
         _edge_V[i]->distributeTDM();     
     }
@@ -162,7 +161,6 @@ void TDM::global_router(){
     for(unsigned int i=0;i<_group_V.size();i++){
         int t = _group_V[i]->getTDM();
         if(t>maxTDM)maxTDM = t;
-
     }
 
     //Terminate condition : Compare with minimum answer. If we can't update  minimum answer more than N times, terminate global router.
@@ -187,7 +185,7 @@ void TDM::global_router(){
     iteration++;
  }
     cout<<"phase1 use "<<iteration<<" iteration"<<endl;
- //Set Net information to Edge before phase2
+    //Set Net information to Edge before phase2
     for(unsigned int i=0;i<_edge_V.size();i++){
         _edge_V[i]->initializeCongestion();
     }
