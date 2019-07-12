@@ -116,6 +116,7 @@ public:
     int getGroupSize() {return _netgroup.size();}
     void showInfo();
     void setMin_routetoEdge();
+    void clearEdgeTDM(){_edge_tdm.clear();}
     map<int,int> Min_edge_tdm; //edgeID -> TDM
 
 private:
@@ -167,6 +168,7 @@ public:
     int getTDM(){return _TDM;}
     unsigned getId() {return  _uid;}
     void calculateTDM();
+    void updateTDM();
 private:
     unsigned _uid;
     vector<Net*> _nets;

@@ -151,14 +151,24 @@ void TDM::global_router(){
     //Use shortest path algorithm to route all nets
     local_router();
 
-    //Calculate group's total TDM
+    for(unsigned int i=0;i<_net_V.size();i++){
+        _net_V[i]->clearEdgeTDM();
+    }
+
+    //Distribute all TDM and calculate all TDM
     for(unsigned int i=0;i<_edge_V.size();i++){
         _edge_V[i]->distributeTDM();     
     }
 
+    for(unsigned int i=0;i<_net_V.size();i++){
+        _net_V[i]->calculateTDM();
+    }
+
+
     int maxTDM = 0;
 
     for(unsigned int i=0;i<_group_V.size();i++){
+        _group_V[i]->updateTDM();
         int t = _group_V[i]->getTDM();
         if(t>maxTDM)maxTDM = t;
     }

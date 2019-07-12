@@ -25,8 +25,8 @@ void FPGA::showInfo(){
 
 void Net::calculateTDM(){
     _TDM = 0;
-    for(unsigned int i=0; i<_cur_route.size();i++){
-         _TDM += _cur_route[i]->getMaxTableValue();
+    for(auto it = _edge_tdm.begin();it!=_edge_tdm.end();++it){
+        _TDM += it->second;
     }
 }
 
@@ -97,35 +97,40 @@ void Edge::distributeTDM(){
 
     multiset<pIN> sortedNet;
     int rank = 0;
+
+    
     //insert
     for(unsigned int i = 0; i < _route.size(); i++){
         Net* nn = _route[i];
+        int max_cost = 0;
         for(int j = 0; j < nn->getGroupSize(); ++j){
             NetGroup* ng = nn->getNetGroup(j);    
             int cost = ng->getTDM();
-            sortedNet.insert(pIN(cost,nn));
+            max_cost = max(cost,max_cost);
         }
+        sortedNet.insert(pIN(max_cost,nn));
+        
     }
 
     for (auto it=sortedNet.begin(); it!=sortedNet.end(); ++it){
         Net* nn = it->second;
-        for(int j = 0; j < nn->getGroupSize(); ++j){
-            NetGroup* ng = nn->getNetGroup(0);
-            //int id = nn->getId();
-            int new_tdm = _T->getValue(_congestion,rank);//lookuptable[_congestion][rank];
-            int prev_tdm = nn->getedgeTDM(_uid);
-            // if(prev_tdm < 0){
-                // cout <<  " net"<< nn->getId() << " group"<<j <<" "<< prev_tdm << endl;
-            // }
-            nn->setedgeTDM(_uid,new_tdm);
-
-            //incerment
-            nn->incrementTDM(new_tdm - prev_tdm);
-            ng->incrementTDM(new_tdm - prev_tdm);
-            rank++;
-        }
+        int new_tdm = _T->getValue(_congestion,rank);//lookuptable[_congestion][rank];
+        nn->setedgeTDM(_uid,new_tdm);
+        rank++;
     }
+
+    //TODO update net groupTDM
+    
 }
+void NetGroup::updateTDM(){
+    _TDM = 0;
+    for (unsigned int i = 0; i < _nets.size(); ++i){
+        _TDM += _nets[i]->getTDM();
+    }
+    
+}
+
+
 
 void Net::setMin_routetoEdge(){
     Edge* e;
