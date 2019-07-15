@@ -109,6 +109,7 @@ public:
     void setTDM(int t){_TDM = t;}
     void incrementTDM(int i) {_TDM = _TDM + i; }
     void calculateTDM();
+    void calculateminTDM();
     void decomposition();
     int getSubnetNum() { return _subnets.size(); }
     SubNet* getSubNet(unsigned i) { return _subnets[i]; }

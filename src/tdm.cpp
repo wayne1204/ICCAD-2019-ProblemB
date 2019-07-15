@@ -218,8 +218,18 @@ void TDM::global_router()
         }
         else{
             terminateConditionCount++;
-            if (terminateConditionCount > 3)
+            if (terminateConditionCount > 3){
+                for (unsigned int i = 0; i < _net_V.size(); i++){
+                    _net_V[i]->calculateminTDM();
+                }
+
+                for (unsigned int i = 0; i < _group_V.size(); i++){
+                    _group_V[i]->updateTDM();
+                }
+                
                 break;
+            }
+                
         }
 
         //Update edge's weight for next iteration

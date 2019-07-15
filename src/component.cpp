@@ -30,6 +30,13 @@ void Net::calculateTDM(){
     }
 }
 
+void Net::calculateminTDM(){
+    _TDM = 0;
+    for(auto it = Min_edge_tdm.begin();it!=Min_edge_tdm.end();++it){
+        _TDM += it->second;
+    }
+}
+
 void Net::decomposition(){
     if(_targets.size() == 1){
         SubNet* sn = new SubNet(0, this, _source, _targets[0]);
