@@ -31,3 +31,5 @@ $ ./tdm <input> <output>
 $ ./evaluater_V3 <input> <output>
 ```
 
+### Result
+https://docs.google.com/spreadsheets/d/16-W2OZZZRlo_uKKbR1mh9Ab0Xff4AxLhppvCP39IYpM/edit?usp=sharing

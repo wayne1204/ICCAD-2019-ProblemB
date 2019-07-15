@@ -135,15 +135,29 @@ void TDM::showStatus()
     cout << " #net groups | " << _group_V.size() << endl;
 
     cout << endl;
+    cout << "net group size\n";
+    set<pLG> sortedGroup;
+    double avg_tdm = 0.0;
+    int cnt = 0;
+    for(size_t i = 0; i < _group_V.size(); ++i){
+        sortedGroup.insert(pLG(_group_V[i]->getTDM(), _group_V[i]));
+        avg_tdm += ((double)_group_V[i]->getTDM() / (int)_group_V.size());
+    }
+    for(auto it = sortedGroup.rbegin(); it != sortedGroup.rend(); ++it){
+        cout << "tdm:"<<it->second->getTDM() << " #:"<< it->second->getNetNum() << endl;
+        if(++cnt > 10)
+            break;
+    }
+    cout << " avg:" << avg_tdm << endl;
     if (verbose)
     {
-        for (unsigned int i = 0; i < _FPGA_V.size(); ++i)
+        for (size_t i = 0; i < _FPGA_V.size(); ++i)
         {
             _FPGA_V[i]->showInfo();
         }
 
         cout << endl;
-        for (unsigned int i = 0; i < _net_V.size(); ++i)
+        for (size_t i = 0; i < _net_V.size(); ++i)
         {
             _net_V[i]->showInfo();
         }
@@ -183,19 +197,19 @@ void TDM::global_router()
             _net_V[i]->calculateTDM();
         }
 
-        int maxTDM = 0;
+        long long int maxGroupTDM = 0;
 
         for (unsigned int i = 0; i < _group_V.size(); i++){
             _group_V[i]->updateTDM();
             int t = _group_V[i]->getTDM();
-            if (t > maxTDM)
-                maxTDM = t;
+            if (t > maxGroupTDM)
+                maxGroupTDM = t;
         }
 
         //Terminate condition : Compare with minimum answer. If we can't update  minimum answer more than N times, terminate global router.
-        if (maxTDM < minimumTDM) {
+        if (maxGroupTDM < minimumTDM) {
             //update minimum answer
-            minimumTDM = maxTDM;
+            minimumTDM = maxGroupTDM;
             for (unsigned int i = 0; i < _net_V.size(); i++){
                 _net_V[i]->updateMin_route();
                 _net_V[i]->updateMin_edge_TDM();
@@ -216,12 +230,12 @@ void TDM::global_router()
     }
     cout << "phase1 use " << iteration << " iteration" << endl;
     //Set Net information to Edge before phase2
-    for (unsigned int i = 0; i < _edge_V.size(); i++){
-        _edge_V[i]->initializeCongestion();
-    }
-    for (unsigned int i = 0; i < _net_V.size(); i++){
-        _net_V[i]->setMin_routetoEdge();
-    }
+    // for (unsigned int i = 0; i < _edge_V.size(); i++){
+    //     _edge_V[i]->initializeCongestion();
+    // }
+    // for (unsigned int i = 0; i < _net_V.size(); i++){
+    //     _net_V[i]->setMin_routetoEdge();
+    // }
 }
 
 // cut a string from space
@@ -301,7 +315,7 @@ void TDM::local_router()
     set<pIN> sorted_net;
     for (unsigned int i = 0; i < _net_V.size(); i++)
     {
-        int max_tdm = 0;
+        long long int max_tdm = 0;
         for (int j = 0; j < _net_V[i]->getGroupSize(); ++j)
         {
             max_tdm = max(max_tdm, _net_V[i]->getNetGroup(j)->getTDM());
@@ -309,9 +323,9 @@ void TDM::local_router()
         sorted_net.insert(pIN(max_tdm, _net_V[i]));
     }
     // Route from the smallest/largest net group tdm value
-    for (auto it = sorted_net.begin(); it != sorted_net.end(); ++it)
+    for (auto rit = sorted_net.rbegin(); rit != sorted_net.rend(); ++rit)
     {
-        Net *n = it->second;
+        Net *n = rit->second;
         _pathcheck_V.clear();
         _pathcheck_V.resize(_FPGA_V.size(), false);
         n->initializeCur_route();

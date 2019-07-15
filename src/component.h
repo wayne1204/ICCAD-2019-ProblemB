@@ -9,10 +9,11 @@
 #include "table.h"
 #include "math.h"
 
-#define pIF pair<int,FPGA*>
-#define pDF pair<float,FPGA*>
-#define pFE pair<FPGA*,Edge*>
-#define pIN pair<int,Net*>
+#define pIF pair<int, FPGA*>
+#define pDF pair<float, FPGA*>
+#define pFE pair<FPGA*, Edge*>
+#define pIN pair<int, Net*>
+#define pLG pair<long long int, NetGroup*>
 #define verbose 0
 
 using namespace std;
@@ -165,14 +166,15 @@ public:
     }
     void addNet(Net* n) {_nets.push_back(n);}
     void incrementTDM(int i) {_TDM = _TDM + i; }
-    int getTDM(){return _TDM;}
+    long long int getTDM(){return _TDM;}
+    int getNetNum() {return _nets.size();}
     unsigned getId() {return  _uid;}
     void calculateTDM();
     void updateTDM();
 private:
     unsigned _uid;
     vector<Net*> _nets;
-    int _TDM;
+    long long int _TDM;
 };
 
 

@@ -20,8 +20,8 @@ int main(int argc, char** argv){
         return -1;
     }
     tdm.decomposeNet();
-    tdm.showStatus();
     tdm.global_router();
+    tdm.showStatus();
     tdm.outputFile(argv[2]);
     return 0;
 }
