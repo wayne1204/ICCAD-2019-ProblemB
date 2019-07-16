@@ -88,13 +88,6 @@ void Net::showInfo(){
 }
 
 
-void NetGroup::calculateTDM(){
-    _TDM = 0;
-    for(size_t i=0; i<_nets.size();i++){
-        _TDM += _nets[i]->getTDM();
-    }
-
-}
 void Edge::updateWeight(int iteration){
     _weight = (_weight*(float)iteration + pow(2,(float)_congestion/_AvgWeight))/((float)iteration+1);
     if(_weight <1)_weight  = 1;
