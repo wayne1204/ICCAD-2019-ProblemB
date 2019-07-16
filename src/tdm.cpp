@@ -103,6 +103,8 @@ bool TDM::parseFile(const char *fname)
         ++_domiantGroupCount;
         ++i;
     }
+    Edge::_kRatio = ceil(sqrt(_group_V[0]->getNetNum()/ avg_net));
+    cout << " ...Raito k=" << Edge::_kRatio << endl;
     return true;
 }
 
@@ -162,12 +164,11 @@ void TDM::showStatus(const char* fname)
         avg_net += ((double)_group_V[i]->getNetNum() / (int)_group_V.size());
     }
     for(auto it = sortedGroup.rbegin(); it != sortedGroup.rend(); ++it){
-        cout << "tdm:"<<it->second->getTDM() << " #:"<< it->second->getNetNum() << endl;
+        cout << it->second->getId() << " tdm:"<<it->second->getTDM() << " #:"<< it->second->getNetNum() << endl;
         if(++cnt > 10)
             break;
     }
     cout << "[avg] tdm:" << avg_tdm << " net:" << avg_net << endl;
-    cout << endl;
     if (verbose)
     {
         for (size_t i = 0; i < _FPGA_V.size(); ++i)
@@ -193,11 +194,11 @@ void TDM::global_router()
     int terminateConditionCount = 0;
     _pathcheck_V.reserve(_FPGA_V.size());
     while (1) {
-        cout << "iteration : " << iteration << endl;
+        cout << " iteration : " << iteration << endl;
         //Initialize Edge's congestion to zero every iteration
         for (size_t i = 0; i < _edge_V.size(); i++){
-            _edge_V[i]->initializeCongestion();
-            _edge_V[i]->resetNET();
+            _edge_V[i]->initCongestion();
+            _edge_V[i]->resetNet();
         }
 
         //Use shortest path algorithm to route all nets
@@ -208,6 +209,7 @@ void TDM::global_router()
         }
 
         //Distribute all TDM and calculate all TDM
+        cout << " ...[Distribute TDM] " << endl;
         for (size_t i = 0; i < _edge_V.size(); i++){
             _edge_V[i]->distributeTDM();
         }
@@ -239,7 +241,7 @@ void TDM::global_router()
             terminateConditionCount++;
             if (terminateConditionCount > 3){
                 for (size_t i = 0; i < _net_V.size(); i++){
-                    _net_V[i]->calculateminTDM();
+                    _net_V[i]->calculateMinTDM();
                 }
 
                 for (size_t i = 0; i < _group_V.size(); i++){
@@ -261,7 +263,7 @@ void TDM::global_router()
     cout << endl;
     //Set Net information to Edge before phase2
     // for (size_t i = 0; i < _edge_V.size(); i++){
-    //     _edge_V[i]->initializeCongestion();
+    //     _edge_V[i]->initCongestion();
     // }
     // for (size_t i = 0; i < _net_V.size(); i++){
     //     _net_V[i]->setMin_routetoEdge();
@@ -342,20 +344,23 @@ stack<pFE> TDM::Dijkstras(FPGA *source, FPGA *target, unsigned int num)
 //route all the nets by Dijkstras algorithm
 void TDM::local_router()
 {
-    set<pIN> sorted_net;
-    for (unsigned int i = 0; i < _net_V.size(); i++)
-    {
-        long long int max_tdm = 0;
-        for (int j = 0; j < _net_V[i]->getGroupSize(); ++j)
-        {
-            max_tdm = max(max_tdm, _net_V[i]->getNetGroup(j)->getTDM());
-        }
-        sorted_net.insert(pIN(max_tdm, _net_V[i]));
-    }
+    cout << " ...[Dijkstra] " << endl;
+    // set<pIN> sorted_net;
+    // for (size_t i = 0; i < _net_V.size(); i++)
+    // {
+    //     long long int max_tdm = 0;
+    //     for (int j = 0; j < _net_V[i]->getGroupSize(); ++j)
+    //     {
+    //         max_tdm = max(max_tdm, _net_V[i]->getNetGroup(j)->getTDM());
+    //     }
+    //     sorted_net.insert(pIN(max_tdm, _net_V[i]));
+    // }
+
     // Route from the smallest/largest net group tdm value
-    for (auto rit = sorted_net.rbegin(); rit != sorted_net.rend(); ++rit)
+    // for (auto rit = sorted_net.rbegin(); rit != sorted_net.rend(); ++rit)
+    for (size_t i = 0; i < _net_V.size(); i++)
     {
-        Net *n = rit->second;
+        Net *n = _net_V[i];
         _pathcheck_V.clear();
         _pathcheck_V.resize(_FPGA_V.size(), false);
         n->initializeCur_route();

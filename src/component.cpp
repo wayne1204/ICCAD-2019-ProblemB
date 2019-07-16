@@ -8,6 +8,7 @@
 #include <cassert>
 
 float Edge::_AvgWeight = 0.0;
+int   Edge::_kRatio = 0;
 
 void FPGA::setConnection(Edge* e, FPGA* f){
     _connection.push_back(make_pair(f,e));
@@ -30,7 +31,7 @@ void Net::calculateTDM(){
     }
 }
 
-void Net::calculateminTDM(){
+void Net::calculateMinTDM(){
     _TDM = 0;
     for(auto it = Min_edge_tdm.begin();it!=Min_edge_tdm.end();++it){
         _TDM += it->second;
@@ -108,7 +109,7 @@ void Edge::distributeTDM(){
     
     // insert count dominant net
     int dominantCount = 0;
-    for(size_t int i = 0; i < _route.size(); i++){
+    for(size_t i = 0; i < _route.size(); i++){
         Net* nn = _route[i];
         int max_cost = 0;
         if(nn->isDominant()){
@@ -128,9 +129,10 @@ void Edge::distributeTDM(){
         int new_tdm = _T->getValue(_congestion,rank);
         if(dominantCount){
             if(nn->isDominant()){
-                new_tdm = 2 * dominantCount;
+                int a = ceil((double)_kRatio / (_kRatio - 1) * dominantCount);
+                new_tdm = a % 2 == 0 ? a : a+1;
             }else{
-                new_tdm = 2 * _T->getValue(_congestion-dominantCount,0);
+                new_tdm = _kRatio * _T->getValue(_congestion-dominantCount,0);
             }
         }
         
