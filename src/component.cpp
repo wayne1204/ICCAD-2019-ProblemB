@@ -62,7 +62,7 @@ void Net::decomposition(){
     int count = 0;
     set<FPGA*> mst_set;
     mst_set.insert(_source);
-    for(unsigned int i = 0; i < _targets.size(); ++i){
+    for(size_t int i = 0; i < _targets.size(); ++i){
         FPGA* f = _targets[i];
         while(f->getParent() != NULL){
             if(mst_set.find(f->getParent()) != mst_set.end())
@@ -89,7 +89,7 @@ void Net::showInfo(){
 
 void NetGroup::calculateTDM(){
     _TDM = 0;
-    for(unsigned int i=0; i<_nets.size();i++){
+    for(size_t int i=0; i<_nets.size();i++){
         _TDM += _nets[i]->getTDM();
     }
 
@@ -106,10 +106,14 @@ void Edge::distributeTDM(){
     int rank = 0;
 
     
-    //insert
-    for(unsigned int i = 0; i < _route.size(); i++){
+    // insert count dominant net
+    int dominantCount = 0;
+    for(size_t int i = 0; i < _route.size(); i++){
         Net* nn = _route[i];
         int max_cost = 0;
+        if(nn->isDominant()){
+            ++dominantCount;
+        }
         for(int j = 0; j < nn->getGroupSize(); ++j){
             NetGroup* ng = nn->getNetGroup(j);    
             int cost = ng->getTDM();
@@ -118,10 +122,18 @@ void Edge::distributeTDM(){
         sortedNet.insert(pIN(max_cost,nn));
         
     }
-
-    for (auto it=sortedNet.begin(); it!=sortedNet.end(); ++it){
+    
+    for (auto it = sortedNet.begin(); it != sortedNet.end(); ++it){
         Net* nn = it->second;
-        int new_tdm = _T->getValue(_congestion,rank);//lookuptable[_congestion][rank];
+        int new_tdm = _T->getValue(_congestion,rank);
+        if(dominantCount){
+            if(nn->isDominant()){
+                new_tdm = 2 * dominantCount;
+            }else{
+                new_tdm = 2 * _T->getValue(_congestion-dominantCount,0);
+            }
+        }
+        
         nn->setedgeTDM(_uid,new_tdm);
         rank++;
     }
@@ -131,7 +143,7 @@ void Edge::distributeTDM(){
 }
 void NetGroup::updateTDM(){
     _TDM = 0;
-    for (unsigned int i = 0; i < _nets.size(); ++i){
+    for (size_t int i = 0; i < _nets.size(); ++i){
         _TDM += _nets[i]->getTDM();
     }
     
@@ -141,7 +153,7 @@ void NetGroup::updateTDM(){
 
 void Net::setMin_routetoEdge(){
     Edge* e;
-    for(unsigned int i=0;i<_min_route.size();i++){
+    for(size_t int i=0;i<_min_route.size();i++){
         e = _min_route[i];
         e->addCongestion();
         e->addNet(this);
@@ -150,3 +162,9 @@ void Net::setMin_routetoEdge(){
 }
 
 
+void NetGroup::setDominant(){
+    _isDominant = true;
+    for(size_t i = 0; i < _nets.size(); ++i){
+        _nets[i]->setDominant();
+    }
+}
