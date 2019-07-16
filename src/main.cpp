@@ -21,7 +21,7 @@ int main(int argc, char** argv){
     }
     tdm.decomposeNet();
     tdm.global_router();
-    tdm.showStatus();
+    tdm.showStatus(argv[1]);
     tdm.outputFile(argv[2]);
     return 0;
 }

@@ -12,7 +12,7 @@
 - ....
 - input/ : released test cases
 - output/: output result directory
-- evaluater_V3: evaluator
+- eval/: evaluator
 
 ### Compile
 ```
