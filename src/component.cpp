@@ -108,7 +108,7 @@ void Edge::distributeTDM(){
     
     // insert count dominant net
     int dominantCount = 0;
-    for(size_t i = 0; i < _route.size(); i++){
+    for(size_t int i = 0; i < _route.size(); i++){
         Net* nn = _route[i];
         int max_cost = 0;
         if(nn->isDominant()){
