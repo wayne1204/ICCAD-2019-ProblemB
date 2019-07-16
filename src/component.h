@@ -194,7 +194,6 @@ public:
     // TDM function
     void          incrementTDM(int i) {_TDM = _TDM + i; }
     long long int getTDM(){return _TDM;}
-    void          calculateTDM();
     void          updateTDM();
 
 private:
