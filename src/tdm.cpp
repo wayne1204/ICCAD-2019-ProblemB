@@ -76,7 +76,7 @@ bool TDM::parseFile(const char *fname)
     Edge::_AvgWeight = float(nums[2]) / float(nums[1]);
 
     // groups
-    _net_V.reserve(nums[3]);
+    _group_V.reserve(nums[3]);
     for (int i = 0; i < nums[3]; ++i)
     {
         getline(fs, line);
