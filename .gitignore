@@ -3,7 +3,7 @@
 input/synopsys*
 output/*
 
-tdm
+cada0030
 *.o
 *.py
 *.out

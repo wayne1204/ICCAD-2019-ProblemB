@@ -1,8 +1,9 @@
 # ICCAD-2019-ProblemB
 - System-level FPGA Routing with Timing Division Multiplexing Technique
-- [ICCAD Link](http://iccad-contest.org/2019/problems.html)
+- [Contest Link](http://iccad-contest.org/2019/problems.html)
 - language: C++
 - compiler: -std=c++11
+- team: cada0030
 
 ### Structure
 - **src/** : source code directory

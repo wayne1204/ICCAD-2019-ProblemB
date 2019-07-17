@@ -105,15 +105,14 @@ void Edge::distributeTDM(){
 
     multiset<pIN> sortedNet;
     int rank = 0;
-
-    
+  
     // insert count dominant net
-    int dominantCount = 0;
+    int dominantCnt = 0;
     for(size_t i = 0; i < _route.size(); i++){
         Net* nn = _route[i];
         int max_cost = 0;
         if(nn->isDominant()){
-            ++dominantCount;
+            ++dominantCnt;
         }
         for(int j = 0; j < nn->getGroupSize(); ++j){
             NetGroup* ng = nn->getNetGroup(j);    
@@ -121,28 +120,44 @@ void Edge::distributeTDM(){
             max_cost = max(cost,max_cost);
         }
         sortedNet.insert(pIN(max_cost,nn));
-        
     }
     
     for (auto it = sortedNet.begin(); it != sortedNet.end(); ++it){
         Net* nn = it->second;
-        int new_tdm = _T->getValue(_congestion,rank);
-        if(dominantCount){
+        int new_tdm;
+        // exist dominant group
+        if(dominantCnt){
             if(nn->isDominant()){
-                int a = ceil((double)_kRatio / (_kRatio - 1) * dominantCount);
-                new_tdm = a % 2 == 0 ? a : a+1;
+                int a = ceil((double)_kRatio / (_kRatio - 1) * dominantCnt);
+                new_tdm = (a % 2 == 0) ? a : a+1;
             }else{
-                new_tdm = _kRatio * _T->getValue(_congestion-dominantCount,0);
+                new_tdm = _kRatio * getTableValue(_congestion - dominantCnt, rank++);
             }
         }
-        
+        // no dominant group
+        else{
+           new_tdm = getTableValue(_congestion, rank++);
+        }
         nn->setedgeTDM(_uid,new_tdm);
-        rank++;
     }
 
     //TODO update net groupTDM
+}
+
+int Edge::getTableValue(int congestion, int rank){
+    if(congestion % 2 == 0){
+        return congestion;
+    }
+    else{
+        if(rank < (congestion+1)/2 ){
+            return congestion + 1;
+        }
+        else
+            return congestion - 1; 
+    }
     
 }
+
 void NetGroup::updateTDM(){
     _TDM = 0;
     for (size_t i = 0; i < _nets.size(); ++i){

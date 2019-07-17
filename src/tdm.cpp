@@ -50,7 +50,7 @@ bool TDM::parseFile(const char *fname)
         f1 = stoi(token);
         begin = getToken(begin, line, token);
         f2 = stoi(token);
-        Edge *e = new Edge(i, _T);
+        Edge *e = new Edge(i);
         e->setVertex(_FPGA_V[f1], _FPGA_V[f2]);
         _edge_V.push_back(e);
         _FPGA_V[f1]->setConnection(e, _FPGA_V[f2]);
@@ -345,22 +345,23 @@ stack<pFE> TDM::Dijkstras(FPGA *source, FPGA *target, unsigned int num)
 void TDM::local_router()
 {
     cout << " ...[Dijkstra] " << endl;
-    // set<pIN> sorted_net;
-    // for (size_t i = 0; i < _net_V.size(); i++)
-    // {
-    //     long long int max_tdm = 0;
-    //     for (int j = 0; j < _net_V[i]->getGroupSize(); ++j)
-    //     {
-    //         max_tdm = max(max_tdm, _net_V[i]->getNetGroup(j)->getTDM());
-    //     }
-    //     sorted_net.insert(pIN(max_tdm, _net_V[i]));
-    // }
-
-    // Route from the smallest/largest net group tdm value
-    // for (auto rit = sorted_net.rbegin(); rit != sorted_net.rend(); ++rit)
+    set<pIN> sorted_net;
     for (size_t i = 0; i < _net_V.size(); i++)
     {
-        Net *n = _net_V[i];
+        long long int max_tdm = 0;
+        for (int j = 0; j < _net_V[i]->getGroupSize(); ++j)
+        {
+            max_tdm = max(max_tdm, _net_V[i]->getNetGroup(j)->getTDM());
+        }
+        sorted_net.insert(pIN(max_tdm, _net_V[i]));
+    }
+
+    // Route from the smallest/largest net group tdm value
+    for (auto rit = sorted_net.rbegin(); rit != sorted_net.rend(); ++rit)
+    // for (size_t i = 0; i < _net_V.size(); i++)
+    {
+        // Net *n = _net_V[i];
+        Net *n = rit->second;
         _pathcheck_V.clear();
         _pathcheck_V.resize(_FPGA_V.size(), false);
         n->initializeCur_route();

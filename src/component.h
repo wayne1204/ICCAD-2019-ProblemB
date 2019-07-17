@@ -6,7 +6,6 @@
 #include <utility>
 #include <set>
 #include <map>
-#include "table.h"
 #include "math.h"
 
 #define pIF pair<int, FPGA*>
@@ -59,11 +58,11 @@ private:
 class Edge
 {
 public:
-    Edge(unsigned id ,Table* t){
+    Edge(unsigned id){
         _uid = id;
         _weight = 1.0;
         _congestion = 0;
-        _T = t;
+        // _T = t;
     }
     // basic info
     void      setVertex(FPGA* f1, FPGA* f2) {_source = f1; _target = f2;}
@@ -74,7 +73,7 @@ public:
     void      updateWeight(int iteration);
     void      addCongestion(){_congestion++;}
     void      initCongestion(){_congestion = 0;}
-    int       getMaxTableValue(){return _T->getValue(_congestion,0);}
+    int       getTableValue(int, int); 
 
     // route
     void      resetNet(){_route.clear();}
@@ -88,7 +87,7 @@ private:
     unsigned  _uid;
     float     _weight;
     int       _congestion;
-    Table*    _T;
+    // Table*    _T;
     FPGA*     _source;
     FPGA*     _target;
     vector<Net*> _route;

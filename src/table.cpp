@@ -1,7 +1,6 @@
 #include <fstream>
 #include <iostream>
 #include <vector>
-#include "table.h"
 using namespace std;
 
 // vector<vector<int> > Table::_lookUpTable;

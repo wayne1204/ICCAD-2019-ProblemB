@@ -2,8 +2,8 @@ CC=g++
 CFLAGS = -Wall -O2 -std=c++11  
 # CFLAGS = -Wall -g -std=c++11 
 
-EXE = tdm
-OBJ = main.o tdm.o component.o table.o
+EXE = cada0030
+OBJ = main.o tdm.o component.o
 
 all:$(EXE)
 
