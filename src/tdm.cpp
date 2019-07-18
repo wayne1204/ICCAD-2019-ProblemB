@@ -103,8 +103,8 @@ bool TDM::parseFile(const char *fname)
         ++_domiantGroupCount;
         ++i;
     }
-    Edge::_kRatio = ceil(sqrt(_group_V[0]->getNetNum()/ avg_net));
-    cout << " ...Raito k=" << Edge::_kRatio << endl;
+    if(_domiantGroupCount)
+        Edge::_kRatio = ceil(sqrt(_group_V[0]->getNetNum()/ avg_net));
     return true;
 }
 
@@ -190,11 +190,14 @@ void TDM::global_router()
     //phase1
     cout << " [routing] \n";
     int iteration = 0;
-    int minimumTDM = numeric_limits<int>::max();
+    long long int minimumTDM = numeric_limits<long long int>::max();
+    int originalK = Edge::_kRatio, stepSize = Edge::_kRatio*0.2+1;
     int terminateConditionCount = 0;
+    
     _pathcheck_V.reserve(_FPGA_V.size());
     while (1) {
-        cout << " iteration : " << iteration << endl;
+        // cout << " iteration:" << iteration << endl;
+        cout << " iteration:" << iteration << ", k ratio:" << Edge::_kRatio << endl;
         //Initialize Edge's congestion to zero every iteration
         for (size_t i = 0; i < _edge_V.size(); i++){
             _edge_V[i]->initCongestion();
@@ -203,6 +206,8 @@ void TDM::global_router()
 
         //Use shortest path algorithm to route all nets
         local_router();
+        // if(iteration == 0)
+        // updatekRatio();
 
         for (size_t i = 0; i < _net_V.size(); i++) {
             _net_V[i]->clearEdgeTDM();
@@ -228,6 +233,7 @@ void TDM::global_router()
         }
 
         //Terminate condition : Compare with minimum answer. If we can't update  minimum answer more than N times, terminate global router.
+        cout << " ...current:" << maxGroupTDM  <<  " | min:" << minimumTDM  <<endl;
         if (maxGroupTDM < minimumTDM) {
             //update minimum answer
             minimumTDM = maxGroupTDM;
@@ -247,15 +253,18 @@ void TDM::global_router()
                 for (size_t i = 0; i < _group_V.size(); i++){
                     _group_V[i]->updateTDM();
                 }
-                
-                break;
-            }
-                
+                Edge::_kRatio += stepSize;
+                terminateConditionCount = 0;
+                // break;
+            }       
         }
 
         //Update edge's weight for next iteration
         for (size_t i = 0; i < _edge_V.size(); i++) {
             _edge_V[i]->updateWeight(iteration);
+        }
+        if(Edge::_kRatio > 2 * originalK){
+            break;
         }
         iteration++;
     }
@@ -269,6 +278,25 @@ void TDM::global_router()
     //     _net_V[i]->setMin_routetoEdge();
     // }
 }
+
+
+// update k-ratio by group edge ratio
+void TDM::updatekRatio(){
+    int maxGroupEdge = 0;
+    double avgGroupEdge = 0.0; 
+
+    for(size_t i = 0; i < _group_V.size(); ++i){
+        int groupEdge = 0;
+        for(int j = 0; j < _group_V[i]->getNetNum(); ++j){
+            groupEdge += _group_V[i]->getNet(j)->getCur_routeNum();
+        }
+        maxGroupEdge = max(maxGroupEdge, groupEdge);
+        avgGroupEdge += (double)groupEdge / _group_V.size();
+    }
+    Edge::_kRatio = ceil(sqrt(maxGroupEdge / avgGroupEdge));
+    cout << maxGroupEdge << " " << avgGroupEdge << " " << Edge::_kRatio <<endl;
+}
+
 
 // cut a string from space
 size_t TDM::getToken(size_t pos, string &s, string &token)

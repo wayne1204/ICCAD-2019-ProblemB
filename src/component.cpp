@@ -8,7 +8,7 @@
 #include <cassert>
 
 float Edge::_AvgWeight = 0.0;
-int   Edge::_kRatio = 0;
+int   Edge::_kRatio = 1;
 
 void FPGA::setConnection(Edge* e, FPGA* f){
     _connection.push_back(make_pair(f,e));

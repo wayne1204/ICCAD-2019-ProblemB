@@ -111,6 +111,7 @@ public:
     // route info
     void      addEdgetoCur_route(Edge* e){ _cur_route.push_back(e);}
     void      initializeCur_route(){ _cur_route.clear();}
+    int       getCur_routeNum(){ return _cur_route.size();}
     int       getMin_routeNum(){ return _min_route.size();}
     void      updateMin_route(){ _min_route = _cur_route;}
     void      setMin_routetoEdge();
@@ -189,6 +190,7 @@ public:
     bool          isDominant() {return _isDominant; }
     void          addNet(Net* n) {_nets.push_back(n);}
     int           getNetNum() {return _nets.size();}
+    Net*          getNet(int i){return _nets[i];}
 
     // TDM function
     void          incrementTDM(int i) {_TDM = _TDM + i; }

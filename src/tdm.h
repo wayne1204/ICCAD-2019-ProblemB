@@ -17,6 +17,7 @@ class TDM
     bool parseFile(const char* fname);
     bool outputFile(const char* fname);
     void showStatus(const char* fname);
+    void updatekRatio();  
     void decomposeNet();
     void global_router();
 
