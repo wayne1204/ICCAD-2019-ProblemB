@@ -284,15 +284,15 @@ size_t TDM::getToken(size_t pos, string &s, string &token)
     return end;
 }
 
-// struct pIFcomp {
-//   bool operator() (const pIF& lhs, const pIF& rhs) const
-//   {return lhs.first < rhs.first;}
-// };
+struct pDFcomp {
+   bool operator() (const pDF& lhs, const pDF& rhs) const
+   {return lhs.first < rhs.first;}
+ };
 
 //single source single target shortest path
 stack<pFE> TDM::Dijkstras(FPGA *source, FPGA *target, unsigned int num)
 {
-    set<pDF> Q;
+    set<pDF,pDFcomp> Q;
     float maxf = numeric_limits<float>::max();
     vector<float> d(num, maxf); //distance
     vector<pFE> parent(num);    //Record the parentId and edge of each FPGA after Dijkstras
