@@ -24,7 +24,7 @@ $ cd ..
 
 ### Run 
 ```
-$ ./tdm <input> <output>
+$ ./cada0030 <input> <output>
 ```
 
 ### Evaluation
