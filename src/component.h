@@ -69,7 +69,7 @@ public:
     unsigned  getId() {return _uid;}
 
     // edge weight
-    float     getWeight(){return _weight+pow(2,_congestion/_AvgWeight);}
+    float     getWeight(){return pow(2,_congestion/_AvgWeight);}
     void      updateWeight(int iteration);
     void      addCongestion(){_congestion++;}
     void      initCongestion(){_congestion = 0;}
@@ -80,8 +80,8 @@ public:
     void      addNet(Net* n){_route.push_back(n);}
     void      distributeTDM();
 
-    static float _AvgWeight;
-    static int   _kRatio;   // ratio used in LUT
+    static float   _AvgWeight;
+    static double  _kRatio;   // ratio used in LUT
 private:
     //static Table _T;
     unsigned  _uid;
@@ -190,6 +190,7 @@ public:
     bool          isDominant() {return _isDominant; }
     void          addNet(Net* n) {_nets.push_back(n);}
     int           getNetNum() {return _nets.size();}
+    int           getSubnetNum();
     Net*          getNet(int i){return _nets[i];}
 
     // TDM function

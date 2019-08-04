@@ -15,6 +15,7 @@ class TDM
         _domiantGroupCount = 0;
     }
     bool parseFile(const char* fname);
+    void findDominantGroup();
     bool outputFile(const char* fname);
     void showStatus(const char* fname);
     void updatekRatio();  
@@ -23,7 +24,8 @@ class TDM
 
     private:
     size_t getToken(size_t pos, string& s, string& token);
-    stack<pair<FPGA*,Edge*> > Dijkstras(FPGA* source,FPGA* target,unsigned int num);
+    stack<pFE> Dijkstras(FPGA* source,FPGA* target,unsigned int num);
+    
     void local_router();
     int _domiantGroupCount;  // number of dominat count
     vector<FPGA*> _FPGA_V;

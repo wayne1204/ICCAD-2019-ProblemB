@@ -90,8 +90,14 @@ bool TDM::parseFile(const char *fname)
         }
         _group_V.push_back(g);
     }
+    findDominantGroup();
+    return true;
+}
 
-    // find domimant group
+
+// find domimant group
+void TDM::findDominantGroup(){
+    
     sort(_group_V.begin(), _group_V.end(), groupCompare);
     double avg_net = 0.0;
     for(size_t i = 0; i < _group_V.size(); ++i){
@@ -103,10 +109,27 @@ bool TDM::parseFile(const char *fname)
         ++_domiantGroupCount;
         ++i;
     }
-    if(_domiantGroupCount)
-        Edge::_kRatio = ceil(sqrt(_group_V[0]->getNetNum()/ avg_net));
-    return true;
+
+    if(_domiantGroupCount){
+        // Edge::_kRatio = ceil(sqrt(_group_V[0]->getNetNum()/ avg_net));
+        Edge::_kRatio = _group_V[0]->getNetNum()/avg_net;
+    }
+    // else{
+    //     Edge::_kRatio = _group_V[i]->getNetNum() / avg_net;
+    //     for(int i = 0; i < 1; ++i){
+    //         _group_V[i]->setDominant();
+    //         ++_domiantGroupCount;;
+    //     }
+    // }
+
+    int cnt = 0;
+    for(size_t i = 0; i < _net_V.size(); ++i){
+        if(_net_V[i]->isDominant())
+            cnt++;
+    }
+    cout << " ...dominant: " << cnt << "/" << _net_V.size() << endl;
 }
+
 
 //output file
 bool TDM::outputFile(const char *fname)
@@ -164,7 +187,8 @@ void TDM::showStatus(const char* fname)
         avg_net += ((double)_group_V[i]->getNetNum() / (int)_group_V.size());
     }
     for(auto it = sortedGroup.rbegin(); it != sortedGroup.rend(); ++it){
-        cout << it->second->getId() << " tdm:"<<it->second->getTDM() << " #:"<< it->second->getNetNum() << endl;
+        printf("[%5d] tdm:%lld net:%d subnet:%d \n", it->second->getId(),
+               it->second->getTDM(), it->second->getNetNum(), it->second->getSubnetNum());
         if(++cnt > 10)
             break;
     }
@@ -191,7 +215,7 @@ void TDM::global_router()
     cout << " [routing] \n";
     int iteration = 0;
     long long int minimumTDM = numeric_limits<long long int>::max();
-    int originalK = Edge::_kRatio, stepSize = Edge::_kRatio*0.2+1;
+    int originalK = Edge::_kRatio, stepSize = ceil(Edge::_kRatio*0.1);
     int terminateConditionCount = 0;
     
     _pathcheck_V.reserve(_FPGA_V.size());
@@ -214,7 +238,7 @@ void TDM::global_router()
         }
 
         //Distribute all TDM and calculate all TDM
-        cout << " ...[Distribute TDM] " << endl;
+        // cout << " ...[Distribute TDM] " << endl;
         for (size_t i = 0; i < _edge_V.size(); i++){
             _edge_V[i]->distributeTDM();
         }
@@ -224,12 +248,9 @@ void TDM::global_router()
         }
 
         long long int maxGroupTDM = 0;
-
         for (size_t i = 0; i < _group_V.size(); i++){
             _group_V[i]->updateTDM();
-            int t = _group_V[i]->getTDM();
-            if (t > maxGroupTDM)
-                maxGroupTDM = t;
+            maxGroupTDM = max(maxGroupTDM, _group_V[i]->getTDM());
         }
 
         //Terminate condition : Compare with minimum answer. If we can't update  minimum answer more than N times, terminate global router.
@@ -253,17 +274,17 @@ void TDM::global_router()
                 for (size_t i = 0; i < _group_V.size(); i++){
                     _group_V[i]->updateTDM();
                 }
-                Edge::_kRatio += stepSize;
+                Edge::_kRatio -= stepSize;
                 terminateConditionCount = 0;
                 // break;
             }       
         }
 
         //Update edge's weight for next iteration
-        for (size_t i = 0; i < _edge_V.size(); i++) {
-            _edge_V[i]->updateWeight(iteration);
-        }
-        if(Edge::_kRatio > 2 * originalK){
+        // for (size_t i = 0; i < _edge_V.size(); i++) {
+        //     _edge_V[i]->updateWeight(iteration);
+        // }
+        if(Edge::_kRatio < sqrt(originalK)){
             break;
         }
         iteration++;
@@ -372,7 +393,7 @@ stack<pFE> TDM::Dijkstras(FPGA *source, FPGA *target, unsigned int num)
 //route all the nets by Dijkstras algorithm
 void TDM::local_router()
 {
-    cout << " ...[Dijkstra] " << endl;
+    // cout << " ...[Dijkstra] " << endl;
     set<pIN> sorted_net;
     for (size_t i = 0; i < _net_V.size(); i++)
     {
