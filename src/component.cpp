@@ -7,8 +7,8 @@
 #include "component.h"
 #include <cassert>
 
-float Edge::_AvgWeight = 0.0;
-int   Edge::_kRatio = 0;
+float   Edge::_AvgWeight = 0.0;
+double  Edge::_kRatio = 1;
 
 void FPGA::setConnection(Edge* e, FPGA* f){
     _connection.push_back(make_pair(f,e));
@@ -89,7 +89,7 @@ void Net::showInfo(){
 
 
 void Edge::updateWeight(int iteration){
-    _weight = (_weight*(float)iteration + pow(2,(float)_congestion/_AvgWeight))/((float)iteration+1);
+    _weight = (_weight * iteration + pow(2,(float)_congestion/_AvgWeight))/(iteration+1);
     if(_weight <1)_weight  = 1;
     //cout<<"Edge "<<this->getId()<<" : "<<_weight<<endl;
 }
@@ -121,11 +121,11 @@ void Edge::distributeTDM(){
         // exist dominant group
         if(dominantCnt){
             if(nn->isDominant()){
-                int a = ceil((double)_kRatio / (_kRatio - 1) * dominantCnt);
-                new_tdm = (a % 2 == 0) ? a : a+1;
+                new_tdm = ceil(_kRatio / (_kRatio - 1) * dominantCnt);
             }else{
-                new_tdm = _kRatio * getTableValue(_congestion - dominantCnt, rank++);
+                new_tdm = ceil(_kRatio * getTableValue(_congestion - dominantCnt, rank++));
             }
+            new_tdm = (new_tdm % 2 == 0) ? new_tdm : new_tdm + 1;
         }
         // no dominant group
         else{
@@ -160,6 +160,13 @@ void NetGroup::updateTDM(){
 }
 
 
+int NetGroup::getSubnetNum(){
+    int ret = 0;
+    for(size_t i = 0; i < _nets.size(); ++i){
+        ret += _nets[i]->getSubnetNum();
+    }
+    return ret;
+}
 
 void Net::setMin_routetoEdge(){
     Edge* e;

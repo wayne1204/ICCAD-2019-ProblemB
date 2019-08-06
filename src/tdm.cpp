@@ -10,7 +10,7 @@
 using namespace std;
 
 bool groupCompare(NetGroup* a, NetGroup* b) { 
-    return (a->getNetNum() > b->getNetNum());
+    return (a->getSubnetNum() > b->getSubnetNum());
 }
 
 // parse input file
@@ -90,25 +90,49 @@ bool TDM::parseFile(const char *fname)
         }
         _group_V.push_back(g);
     }
+    return true;
+}
 
-    // find domimant group
+
+// find domimant group
+void TDM::findDominantGroup(){
+    
     sort(_group_V.begin(), _group_V.end(), groupCompare);
-    double avg_net = 0.0;
+    double avg_net = 0.0, avg_subnet = 0.0;
     for(size_t i = 0; i < _group_V.size(); ++i){
         avg_net += ((double)_group_V[i]->getNetNum() / _group_V.size());
+        avg_subnet += ((double)_group_V[i]->getSubnetNum() / _group_V.size());
     }
     int i = 0;
-    while(_group_V[i]->getNetNum() > 2 * avg_net){
+    cout << " avg_net:" << avg_net << " avg_subnet:"<< avg_subnet << endl;
+    while(_group_V[i]->getSubnetNum() > 3 * avg_subnet){
         _group_V[i]->setDominant();
         ++_domiantGroupCount;
         ++i;
     }
-    Edge::_kRatio = ceil(sqrt(_group_V[0]->getNetNum()/ avg_net));
-    cout << " ...Raito k=" << Edge::_kRatio << endl;
-    return true;
+
+    if(_domiantGroupCount){
+        // Edge::_kRatio = ceil(sqrt(_group_V[0]->getNetNum()/ avg_net));
+        Edge::_kRatio = sqrt(_group_V[0]->getSubnetNum()/avg_subnet);
+    }
+    // else{
+    //     Edge::_kRatio = _group_V[i]->getNetNum() / avg_net;
+    //     for(int i = 0; i < 1; ++i){
+    //         _group_V[i]->setDominant();
+    //         ++_domiantGroupCount;;
+    //     }
+    // }
+
+    int cnt = 0;
+    for(size_t i = 0; i < _net_V.size(); ++i){
+        if(_net_V[i]->isDominant())
+            cnt++;
+    }
+    cout << " ...dominant net: " << cnt << "/" << _net_V.size() << endl;
 }
 
-//output file
+
+// output file
 bool TDM::outputFile(const char *fname)
 {
     fstream fs(fname, ios::out);
@@ -156,19 +180,21 @@ void TDM::showStatus(const char* fname)
     cout << " #net groups | " << _group_V.size() << endl;
     cout << "\n [NetGroup Info]\n";
     set<pLG> sortedGroup;
-    double avg_tdm = 0.0, avg_net = 0.0;
+    double avg_tdm = 0.0, avg_net = 0.0, avg_subnet = 0.0;
     int cnt = 0;
     for(size_t i = 0; i < _group_V.size(); ++i){
         sortedGroup.insert(pLG(_group_V[i]->getTDM(), _group_V[i]));
         avg_tdm += ((double)_group_V[i]->getTDM() / (int)_group_V.size());
         avg_net += ((double)_group_V[i]->getNetNum() / (int)_group_V.size());
+        avg_subnet += ((double)_group_V[i]->getSubnetNum() / (int)_group_V.size());
     }
     for(auto it = sortedGroup.rbegin(); it != sortedGroup.rend(); ++it){
-        cout << it->second->getId() << " tdm:"<<it->second->getTDM() << " #:"<< it->second->getNetNum() << endl;
+        printf("[%5d] tdm:%lld net/subnet: %d/%d \n", it->second->getId(),
+               it->second->getTDM(), it->second->getNetNum(), it->second->getSubnetNum());
         if(++cnt > 10)
             break;
     }
-    cout << "[avg] tdm:" << avg_tdm << " net:" << avg_net << endl;
+    cout << "[ avg ] tdm:" << avg_tdm << " net:" << avg_net << " subnet:"<< avg_subnet << endl;
     if (verbose)
     {
         for (size_t i = 0; i < _FPGA_V.size(); ++i)
@@ -189,12 +215,14 @@ void TDM::global_router()
 
     //phase1
     cout << " [routing] \n";
-    int iteration = 0;
-    int minimumTDM = numeric_limits<int>::max();
-    int terminateConditionCount = 0;
+    long long int minimumTDM = numeric_limits<long long int>::max();
+    int iteration = 0, terminateCount = 0, originalK = Edge::_kRatio;
+    double stepSize = (Edge::_kRatio*0.2);
+    
     _pathcheck_V.reserve(_FPGA_V.size());
     while (1) {
-        cout << " iteration : " << iteration << endl;
+        // cout << " iteration:" << iteration << endl;
+        cout << " iteration:" << iteration << ", k ratio:" << Edge::_kRatio << endl;
         //Initialize Edge's congestion to zero every iteration
         for (size_t i = 0; i < _edge_V.size(); i++){
             _edge_V[i]->initCongestion();
@@ -203,13 +231,15 @@ void TDM::global_router()
 
         //Use shortest path algorithm to route all nets
         local_router();
+        // if(iteration == 0)
+        // updatekRatio();
 
         for (size_t i = 0; i < _net_V.size(); i++) {
             _net_V[i]->clearEdgeTDM();
         }
 
         //Distribute all TDM and calculate all TDM
-        cout << " ...[Distribute TDM] " << endl;
+        // cout << " ...[Distribute TDM] " << endl;
         for (size_t i = 0; i < _edge_V.size(); i++){
             _edge_V[i]->distributeTDM();
         }
@@ -219,15 +249,13 @@ void TDM::global_router()
         }
 
         long long int maxGroupTDM = 0;
-
         for (size_t i = 0; i < _group_V.size(); i++){
             _group_V[i]->updateTDM();
-            int t = _group_V[i]->getTDM();
-            if (t > maxGroupTDM)
-                maxGroupTDM = t;
+            maxGroupTDM = max(maxGroupTDM, _group_V[i]->getTDM());
         }
 
         //Terminate condition : Compare with minimum answer. If we can't update  minimum answer more than N times, terminate global router.
+        cout << " ...current:" << maxGroupTDM  <<  " | min:" << minimumTDM  <<endl;
         if (maxGroupTDM < minimumTDM) {
             //update minimum answer
             minimumTDM = maxGroupTDM;
@@ -235,11 +263,11 @@ void TDM::global_router()
                 _net_V[i]->updateMin_route();
                 _net_V[i]->updateMin_edge_TDM();
             }
-            terminateConditionCount = 0;
+            // terminateCount = 0;
         }
         else{
-            terminateConditionCount++;
-            if (terminateConditionCount > 3){
+            terminateCount++;
+            if (terminateCount > 3){
                 for (size_t i = 0; i < _net_V.size(); i++){
                     _net_V[i]->calculateMinTDM();
                 }
@@ -247,15 +275,18 @@ void TDM::global_router()
                 for (size_t i = 0; i < _group_V.size(); i++){
                     _group_V[i]->updateTDM();
                 }
-                
-                break;
-            }
-                
+                Edge::_kRatio -= stepSize;
+                terminateCount = 0;
+                // break;
+            }       
         }
 
         //Update edge's weight for next iteration
-        for (size_t i = 0; i < _edge_V.size(); i++) {
-            _edge_V[i]->updateWeight(iteration);
+        // for (size_t i = 0; i < _edge_V.size(); i++) {
+        //     _edge_V[i]->updateWeight(iteration);
+        // }
+        if(Edge::_kRatio < sqrt(originalK)){
+            break;
         }
         iteration++;
     }
@@ -269,6 +300,25 @@ void TDM::global_router()
     //     _net_V[i]->setMin_routetoEdge();
     // }
 }
+
+
+// update k-ratio by group edge ratio
+void TDM::updatekRatio(){
+    int maxGroupEdge = 0;
+    double avgGroupEdge = 0.0; 
+
+    for(size_t i = 0; i < _group_V.size(); ++i){
+        int groupEdge = 0;
+        for(int j = 0; j < _group_V[i]->getNetNum(); ++j){
+            groupEdge += _group_V[i]->getNet(j)->getCur_routeNum();
+        }
+        maxGroupEdge = max(maxGroupEdge, groupEdge);
+        avgGroupEdge += (double)groupEdge / _group_V.size();
+    }
+    Edge::_kRatio = ceil(sqrt(maxGroupEdge / avgGroupEdge));
+    cout << maxGroupEdge << " " << avgGroupEdge << " " << Edge::_kRatio <<endl;
+}
+
 
 // cut a string from space
 size_t TDM::getToken(size_t pos, string &s, string &token)
@@ -289,7 +339,7 @@ struct pDFcomp {
    {return lhs.first < rhs.first;}
  };
 
-//single source single target shortest path
+//single source single target shortest path algortihm
 stack<pFE> TDM::Dijkstras(FPGA *source, FPGA *target, unsigned int num)
 {
     set<pDF,pDFcomp> Q;
@@ -341,10 +391,10 @@ stack<pFE> TDM::Dijkstras(FPGA *source, FPGA *target, unsigned int num)
     return route;
 }
 
-//route all the nets by Dijkstras algorithm
+//route all nets by Dijkstras algorithm
 void TDM::local_router()
 {
-    cout << " ...[Dijkstra] " << endl;
+    // cout << " ...[Dijkstra] " << endl;
     set<pIN> sorted_net;
     for (size_t i = 0; i < _net_V.size(); i++)
     {
