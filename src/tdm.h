@@ -5,20 +5,29 @@
 #include <utility>
 #include "component.h"
 
+
 using namespace std;
 
 class TDM
 {
     public:
+    TDM(){
+        _domiantGroupCount = 0;
+    }
     bool parseFile(const char* fname);
-    void showStatus();
+    void findDominantGroup();
+    bool outputFile(const char* fname);
+    void showStatus(const char* fname);
+    void updatekRatio();  
     void decomposeNet();
     void global_router();
 
     private:
     size_t getToken(size_t pos, string& s, string& token);
-    stack<pair<FPGA*,Edge*> > Dijkstras(FPGA* source,FPGA* target,unsigned int num);
+    //stack<pFE> Dijkstras(FPGA* source,FPGA* target,unsigned int num);
+    void Dijkstras(FPGA* source,FPGA* target,unsigned int num, stack<pFE>&route);
     void local_router();
+    int _domiantGroupCount;  // number of dominat count
     vector<FPGA*> _FPGA_V;
     vector<Edge*> _edge_V;
     vector<Net*> _net_V;
