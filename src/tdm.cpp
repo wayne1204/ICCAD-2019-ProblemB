@@ -335,8 +335,11 @@ size_t TDM::getToken(size_t pos, string &s, string &token)
 }
 
 struct pDFcomp {
-   bool operator() (const pDF& lhs, const pDF& rhs) const
-   {return lhs.first < rhs.first;}
+    bool operator() (const pDF& lhs, const pDF& rhs) const
+    {
+        if(lhs.first == rhs.first) return lhs.second->getId() < rhs.second->getId();
+        return lhs.first < rhs.first;
+    }
  };
 
 //single source single target shortest path algortihm
