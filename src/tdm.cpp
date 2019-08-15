@@ -284,12 +284,23 @@ void TDM::global_router()
             avg_tdm += (double)_group_V[i]->getTDM() / (int)_group_V.size();
         }
 
-        for (size_t i = 0; i < _group_V.size(); i++){
-            double x = _group_V[i]->getTDM() / avg_tdm;
-            for(int j = 0; j < _group_V[i]->getNetNum(); ++j){
-                _group_V[i]->getNet(j)->setX(x);
+        // for (size_t i = 0; i < _group_V.size(); i++){
+        //     double x = _group_V[i]->getTDM() / avg_tdm;
+        //     for(int j = 0; j < _group_V[i]->getNetNum(); ++j){
+        //         double prev_x = _group_V[i]->getNet(j)->getX();
+        //         _group_V[i]->getNet(j)->setX(x*prev_x);
+        //     }
+        // } 
+
+        for(size_t i = 0; i < _net_V.size(); i++){
+            double x = 0.0;
+            for(unsigned int j = 0; j < _net_V[i]->getGroupSize(); j++){
+                x = max(x,_net_V[i]->getNetGroup(j)->getTDM() / avg_tdm);
             }
-        }    
+            double prev_x = _net_V[i]->getX();
+            _net_V[i]->setX(x*prev_x);
+        }
+
 
         //Terminate condition : Compare with minimum answer. If we can't update  minimum answer more than N times, terminate global router.
         cout << " ...current:" << maxGroupTDM  <<  " | min:" << minimumTDM  <<endl;
