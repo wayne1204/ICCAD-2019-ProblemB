@@ -19,14 +19,14 @@ class TDM
     bool outputFile(const char* fname);
     void showStatus(const char* fname);
     void updatekRatio();  
-    void decomposeNet();
+    void decomposeNet(char* fname);
     void global_router();
 
     private:
     size_t getToken(size_t pos, string& s, string& token);
     //stack<pFE> Dijkstras(FPGA* source,FPGA* target,unsigned int num);
     void Dijkstras(FPGA* source,FPGA* target,unsigned int num, stack<pFE>&route);
-    void local_router();
+    void local_router(bool b, set<pIN>&);
     int _domiantGroupCount;  // number of dominat count
     vector<FPGA*> _FPGA_V;
     vector<Edge*> _edge_V;

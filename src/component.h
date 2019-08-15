@@ -99,6 +99,8 @@ public:
     Net(unsigned id){
         _uid = id;
         _isDominat = false;
+        _weight = 0;
+        _x = 1;
     }
     // basic info
     int       getId(){ return _uid;}
@@ -106,6 +108,10 @@ public:
     void      setTarget(FPGA* f) { _targets.push_back(f);}
     void      setDominant() {_isDominat = true;}
     bool      isDominant() {return _isDominat;}
+    void      setWeight(double w);
+    double    getWeight() {return _weight;}
+    void      setX(double x);
+    double    getX() {return _x;}       
     void      showInfo();
 
     // route info
@@ -142,6 +148,8 @@ public:
 private:
     bool      _isDominat;
     unsigned  _uid;
+    double    _weight;
+    double    _x;
     int       _TDM;
     FPGA*     _source;
     vector<NetGroup*>  _netgroup;	

@@ -2,6 +2,7 @@
 #include <iostream>
 #include <queue>
 #include <set>
+#include <algorithm>
 #include "math.h"
 #include <utility>
 #include "component.h"
@@ -9,6 +10,10 @@
 
 float   Edge::_AvgWeight = 0.0;
 double  Edge::_kRatio = 1;
+
+bool netCompare(Net* a, Net* b) { 
+    return (a->getWeight() > b->getWeight());
+}
 
 void FPGA::setConnection(Edge* e, FPGA* f){
     _connection.push_back(make_pair(f,e));
@@ -77,6 +82,17 @@ void Net::decomposition(){
     }
 }
 
+void Net::setWeight(double w){
+    if(w > _weight)
+        _weight = w;
+}
+
+void Net::setX(double x){
+    if(x > _x)
+        _x = x;
+}
+
+
 void Net::showInfo(){
     cout << "[ Net #" << _uid <<  " ]\n";
     cout << "number of subnets: " << getSubnetNum() << endl;
@@ -96,43 +112,65 @@ void Edge::updateWeight(int iteration){
 
 void Edge::distributeTDM(){
 
-    multiset<pIN> sortedNet;
+    // multiset<pIN> sortedNet;
     int rank = 0;
   
     // insert count dominant net
     int dominantCnt = 0;
-    for(size_t i = 0; i < _route.size(); i++){
-        Net* nn = _route[i];
-        int max_cost = 0;
-        if(nn->isDominant()){
-            ++dominantCnt;
-        }
-        for(int j = 0; j < nn->getGroupSize(); ++j){
-            NetGroup* ng = nn->getNetGroup(j);    
-            int cost = ng->getTDM();
-            max_cost = max(cost,max_cost);
-        }
-        sortedNet.insert(pIN(max_cost,nn));
-    }
+    // for(size_t i = 0; i < _route.size(); i++){
+    //     Net* nn = _route[i];
+    //     int max_cost = 0;
+    //     // if(nn->isDominant()){
+    //     //     ++dominantCnt;
+    //     // }
+    //     for(int j = 0; j < nn->getGroupSize(); ++j){
+    //         NetGroup* ng = nn->getNetGroup(j);    
+    //         int cost = ng->getTDM();
+    //         max_cost = max(cost,max_cost);
+    //     }
+    //     // sortedNet.insert(pIN(max_cost,nn));
+    // }
     
-    for (auto it = sortedNet.begin(); it != sortedNet.end(); ++it){
-        Net* nn = it->second;
-        int new_tdm;
-        // exist dominant group
-        if(dominantCnt){
-            if(nn->isDominant()){
-                new_tdm = ceil(_kRatio / (_kRatio - 1) * dominantCnt);
-            }else{
-                new_tdm = ceil(_kRatio * getTableValue(_congestion - dominantCnt, rank++));
-            }
+    // for (auto it = sortedNet.begin(); it != sortedNet.end(); ++it){
+    double total_sum, sum = 0;
+    sort(_route.begin(), _route.end(), netCompare);
+    for(size_t i = 0; i < _route.size() ; ++i){
+        if(!_route[i]->isDominant())
+            sum += _route[i]->getWeight() * _route[i]->getX();
+        total_sum += _route[i]->getWeight() * _route[i]->getX();
+    }  
+    
+
+    double total_TDM = 1;
+    size_t i;
+    for(i = 0; i < _route.size() ; ++i){
+        if(_route[i]->isDominant()){
+            int new_tdm = ceil(total_sum/(_route[i]->getWeight() * _route[i]->getX()));
             new_tdm = (new_tdm % 2 == 0) ? new_tdm : new_tdm + 1;
+            _route[i]->setedgeTDM(_uid, new_tdm);
+            total_TDM -= (double)1/(double)new_tdm;
         }
-        // no dominant group
-        else{
-           new_tdm = getTableValue(_congestion, rank++);
-        }
-        nn->setedgeTDM(_uid,new_tdm);
+        else break;
     }
+    for(; i < _route.size() ; ++i){
+        int new_tdm = ceil( (sum/(_route[i]->getWeight() * _route[i]->getX()))*(1.0/total_TDM) );
+        new_tdm = (new_tdm % 2 == 0) ? new_tdm : new_tdm + 1;
+        _route[i]->setedgeTDM(_uid, new_tdm);
+    }
+        // exist dominant group
+        // if(dominantCnt){
+        //     if(nn->isDominant()){
+        //         new_tdm = ceil(_kRatio / (_kRatio - 1) * dominantCnt);
+        //     }else{
+        //         new_tdm = ceil(_kRatio * getTableValue(_congestion - dominantCnt, rank++));
+        //     }
+        //     new_tdm = (new_tdm % 2 == 0) ? new_tdm : new_tdm + 1;
+        // }
+        // // no dominant group
+        // else{
+        //    new_tdm = getTableValue(_congestion, rank++);
+        // }
+    // }
 
     //TODO update net groupTDM
 }

@@ -1,4 +1,5 @@
 #include <fstream>
+#include <cassert>
 #include <algorithm>
 #include <iostream>
 #include <set>
@@ -10,6 +11,10 @@
 using namespace std;
 
 bool groupCompare(NetGroup* a, NetGroup* b) { 
+    return (a->getSubnetNum() > b->getSubnetNum());
+}
+
+bool netSubnetCompare(Net* a, Net* b) { 
     return (a->getSubnetNum() > b->getSubnetNum());
 }
 
@@ -96,7 +101,6 @@ bool TDM::parseFile(const char *fname)
 
 // find domimant group
 void TDM::findDominantGroup(){
-    
     sort(_group_V.begin(), _group_V.end(), groupCompare);
     double avg_net = 0.0, avg_subnet = 0.0;
     for(size_t i = 0; i < _group_V.size(); ++i){
@@ -104,6 +108,7 @@ void TDM::findDominantGroup(){
         avg_subnet += ((double)_group_V[i]->getSubnetNum() / _group_V.size());
     }
     int i = 0;
+    cout << _group_V[0]->getId() << " " << _group_V[0]->getSubnetNum() <<endl;
     cout << " avg_net:" << avg_net << " avg_subnet:"<< avg_subnet << endl;
     while(_group_V[i]->getSubnetNum() > 3 * avg_subnet){
         _group_V[i]->setDominant();
@@ -111,10 +116,18 @@ void TDM::findDominantGroup(){
         ++i;
     }
 
-    if(_domiantGroupCount){
-        // Edge::_kRatio = ceil(sqrt(_group_V[0]->getNetNum()/ avg_net));
-        Edge::_kRatio = sqrt(_group_V[0]->getSubnetNum()/avg_subnet);
+    for(size_t i = 0; i < _group_V.size(); ++i){
+        double w = (double)_group_V[i]->getSubnetNum() / avg_subnet;
+        // int weight = (int)w;
+        for(int j = 0; j < _group_V[i]->getNetNum(); ++j){
+            _group_V[i]->getNet(j)->setWeight(w);
+        }
+
     }
+    // if(_domiantGroupCount){
+        // Edge::_kRatio = ceil(sqrt(_group_V[0]->getNetNum()/ avg_net));
+        // Edge::_kRatio = sqrt(_group_V[0]->getSubnetNum()/avg_subnet);
+    // }
     // else{
     //     Edge::_kRatio = _group_V[i]->getNetNum() / avg_net;
     //     for(int i = 0; i < 1; ++i){
@@ -123,12 +136,12 @@ void TDM::findDominantGroup(){
     //     }
     // }
 
-    int cnt = 0;
-    for(size_t i = 0; i < _net_V.size(); ++i){
-        if(_net_V[i]->isDominant())
-            cnt++;
-    }
-    cout << " ...dominant net: " << cnt << "/" << _net_V.size() << endl;
+    // int cnt = 0;
+    // for(size_t i = 0; i < _net_V.size(); ++i){
+    //     if(_net_V[i]->isDominant())
+    //         cnt++;
+    // }
+    // cout << " ...dominant net: " << cnt << "/" << _net_V.size() << endl;
 }
 
 
@@ -157,7 +170,7 @@ bool TDM::outputFile(const char *fname)
     return true;
 }
 
-void TDM::decomposeNet()
+void TDM::decomposeNet(char* fname)
 {
     cout << " [decomposing] \n";
     for (size_t i = 0; i < _net_V.size(); ++i)
@@ -182,6 +195,7 @@ void TDM::showStatus(const char* fname)
     set<pLG> sortedGroup;
     double avg_tdm = 0.0, avg_net = 0.0, avg_subnet = 0.0;
     int cnt = 0;
+
     for(size_t i = 0; i < _group_V.size(); ++i){
         sortedGroup.insert(pLG(_group_V[i]->getTDM(), _group_V[i]));
         avg_tdm += ((double)_group_V[i]->getTDM() / (int)_group_V.size());
@@ -189,9 +203,17 @@ void TDM::showStatus(const char* fname)
         avg_subnet += ((double)_group_V[i]->getSubnetNum() / (int)_group_V.size());
     }
     for(auto it = sortedGroup.rbegin(); it != sortedGroup.rend(); ++it){
-        printf("[%5d] tdm:%lld net/subnet: %d/%d \n", it->second->getId(),
+        printf("[%6d] tdm:%lld net/subnet: %d/%d \n", it->second->getId(),
                it->second->getTDM(), it->second->getNetNum(), it->second->getSubnetNum());
-        if(++cnt > 10)
+        if(++cnt > 20)
+            break;
+    }
+    cout << " ......  " <<endl;
+    cnt = 0;
+    for(auto it = sortedGroup.begin(); it != sortedGroup.end(); ++it){
+        printf("[%6d] tdm:%lld net/subnet: %d/%d \n", it->second->getId(),
+               it->second->getTDM(), it->second->getNetNum(), it->second->getSubnetNum());
+        if(++cnt > 20)
             break;
     }
     cout << "[ avg ] tdm:" << avg_tdm << " net:" << avg_net << " subnet:"<< avg_subnet << endl;
@@ -212,17 +234,14 @@ void TDM::showStatus(const char* fname)
 
 void TDM::global_router()
 {
-
     //phase1
     cout << " [routing] \n";
     long long int minimumTDM = numeric_limits<long long int>::max();
-    int iteration = 0, terminateCount = 0, originalK = Edge::_kRatio;
-    double stepSize = (Edge::_kRatio*0.2);
+    int iteration = 0, terminateCount = 0;
     
     _pathcheck_V.reserve(_FPGA_V.size());
     while (1) {
-        // cout << " iteration:" << iteration << endl;
-        cout << " iteration:" << iteration << ", k ratio:" << Edge::_kRatio << endl;
+        cout << " iteration:" << iteration << endl;
         //Initialize Edge's congestion to zero every iteration
         for (size_t i = 0; i < _edge_V.size(); i++){
             _edge_V[i]->initCongestion();
@@ -230,9 +249,18 @@ void TDM::global_router()
         }
 
         //Use shortest path algorithm to route all nets
-        local_router();
-        // if(iteration == 0)
-        // updatekRatio();
+        set<pIN> sorted_net;
+        for (size_t i = 0; i < _net_V.size(); i++)
+        {
+            long long int max_tdm = 0;
+            for (int j = 0; j < _net_V[i]->getGroupSize(); ++j)
+            {
+                max_tdm = max(max_tdm, _net_V[i]->getNetGroup(j)->getTDM());
+            }
+            sorted_net.insert(pIN(max_tdm, _net_V[i]));
+        }    
+        local_router(true, sorted_net);
+        local_router(false, sorted_net);
 
         for (size_t i = 0; i < _net_V.size(); i++) {
             _net_V[i]->clearEdgeTDM();
@@ -249,10 +277,19 @@ void TDM::global_router()
         }
 
         long long int maxGroupTDM = 0;
+        double avg_tdm = 0;
         for (size_t i = 0; i < _group_V.size(); i++){
             _group_V[i]->updateTDM();
             maxGroupTDM = max(maxGroupTDM, _group_V[i]->getTDM());
+            avg_tdm += (double)_group_V[i]->getTDM() / (int)_group_V.size();
         }
+
+        for (size_t i = 0; i < _group_V.size(); i++){
+            double x = _group_V[i]->getTDM() / avg_tdm;
+            for(int j = 0; j < _group_V[i]->getNetNum(); ++j){
+                _group_V[i]->getNet(j)->setX(x);
+            }
+        }    
 
         //Terminate condition : Compare with minimum answer. If we can't update  minimum answer more than N times, terminate global router.
         cout << " ...current:" << maxGroupTDM  <<  " | min:" << minimumTDM  <<endl;
@@ -275,9 +312,8 @@ void TDM::global_router()
                 for (size_t i = 0; i < _group_V.size(); i++){
                     _group_V[i]->updateTDM();
                 }
-                Edge::_kRatio -= stepSize;
                 terminateCount = 0;
-                // break;
+                break;
             }       
         }
 
@@ -285,9 +321,6 @@ void TDM::global_router()
         // for (size_t i = 0; i < _edge_V.size(); i++) {
         //     _edge_V[i]->updateWeight(iteration);
         // }
-        if(Edge::_kRatio < sqrt(originalK)){
-            break;
-        }
         iteration++;
     }
     cout << "phase1 use " << iteration << " iteration" << endl;
@@ -395,26 +428,30 @@ void TDM::Dijkstras(FPGA *source, FPGA *target, unsigned int num, stack<pFE>&rou
 }
 
 //route all nets by Dijkstras algorithm
-void TDM::local_router()
+void TDM::local_router(bool b, set<pIN>& sorted_net)
 {
     // cout << " ...[Dijkstra] " << endl;
-    set<pIN> sorted_net;
-    for (size_t i = 0; i < _net_V.size(); i++)
-    {
-        long long int max_tdm = 0;
-        for (int j = 0; j < _net_V[i]->getGroupSize(); ++j)
-        {
-            max_tdm = max(max_tdm, _net_V[i]->getNetGroup(j)->getTDM());
-        }
-        sorted_net.insert(pIN(max_tdm, _net_V[i]));
-    }
+    // set<pIN> sorted_net;
+    // for (size_t i = 0; i < _net_V.size(); i++)
+    // {
+    //     long long int max_tdm = 0;
+    //     for (int j = 0; j < _net_V[i]->getGroupSize(); ++j)
+    //     {
+    //         max_tdm = max(max_tdm, _net_V[i]->getNetGroup(j)->getTDM());
+    //     }
+    //     sorted_net.insert(pIN(max_tdm, _net_V[i]));
+    // }
 
     // Route from the smallest/largest net group tdm value
     for (auto rit = sorted_net.rbegin(); rit != sorted_net.rend(); ++rit)
     // for (size_t i = 0; i < _net_V.size(); i++)
     {
-        // Net *n = _net_V[i];
         Net *n = rit->second;
+        if(n->isDominant() && !b)
+            continue;
+        else if(!n->isDominant() && b)
+            continue;
+        // Net *n = _net_V[i];
         _pathcheck_V.clear();
         _pathcheck_V.resize(_FPGA_V.size(), false);
         n->initializeCur_route();
