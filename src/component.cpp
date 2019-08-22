@@ -88,8 +88,7 @@ void Net::setWeight(double w){
 }
 
 void Net::setX(double x){
-    if(x > _x)
-        _x = x;
+    _x = x;
 }
 
 
@@ -132,29 +131,31 @@ void Edge::distributeTDM(){
     // }
     
     // for (auto it = sortedNet.begin(); it != sortedNet.end(); ++it){
-    double total_sum, sum = 0;
+    double total_sum = 0, sum = 0;
     sort(_route.begin(), _route.end(), netCompare);
     for(size_t i = 0; i < _route.size() ; ++i){
         if(!_route[i]->isDominant())
             sum += _route[i]->getWeight() * _route[i]->getX();
         total_sum += _route[i]->getWeight() * _route[i]->getX();
     }  
-    
+    assert(total_sum > 0);
 
     double total_TDM = 1;
     size_t i;
     for(i = 0; i < _route.size() ; ++i){
         if(_route[i]->isDominant()){
-            int new_tdm = ceil(total_sum/(_route[i]->getWeight() * _route[i]->getX()));
+            long long int new_tdm = ceil(total_sum/(_route[i]->getWeight() * _route[i]->getX()));
             new_tdm = (new_tdm % 2 == 0) ? new_tdm : new_tdm + 1;
+            assert(new_tdm > 0);
             _route[i]->setedgeTDM(_uid, new_tdm);
-            total_TDM -= (double)1/(double)new_tdm;
+            total_TDM -= 1.0/(double)new_tdm;
         }
         else break;
     }
     for(; i < _route.size() ; ++i){
-        int new_tdm = ceil( (sum/(_route[i]->getWeight() * _route[i]->getX()))*(1.0/total_TDM) );
+        long long int new_tdm = ceil( (sum/(_route[i]->getWeight() * _route[i]->getX()))*(1.0/total_TDM) );
         new_tdm = (new_tdm % 2 == 0) ? new_tdm : new_tdm + 1;
+        assert(new_tdm > 0);
         _route[i]->setedgeTDM(_uid, new_tdm);
     }
         // exist dominant group

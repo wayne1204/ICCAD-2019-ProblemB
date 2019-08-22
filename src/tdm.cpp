@@ -160,7 +160,7 @@ bool TDM::outputFile(const char *fname)
         int edgeNum = n->getMin_routeNum();
         fs << edgeNum << endl;
         pair<int, int> p;
-        for (map<int, int>::iterator it = n->Min_edge_tdm.begin(); it != n->Min_edge_tdm.end(); ++it)
+        for (auto it = n->Min_edge_tdm.begin(); it != n->Min_edge_tdm.end(); ++it)
         {
             p = *it;
             fs << p.first << " " << p.second << endl;
@@ -237,30 +237,38 @@ void TDM::global_router()
     //phase1
     cout << " [routing] \n";
     long long int minimumTDM = numeric_limits<long long int>::max();
-    int iteration = 0, terminateCount = 0;
+    int iteration = 0, terminateCount = 0, section = 0;
+    // if(_net_V.size() < 300000)
+    //     section = 1;
+    // else if (_net_V.size() < 500000)
+    //     section = 2;
+    // else
+    //     section = 3;
     
     _pathcheck_V.reserve(_FPGA_V.size());
-    while (1) {
-        cout << " iteration:" << iteration << endl;
-        //Initialize Edge's congestion to zero every iteration
-        for (size_t i = 0; i < _edge_V.size(); i++){
-            _edge_V[i]->initCongestion();
-            _edge_V[i]->resetNet();
-        }
-
-        //Use shortest path algorithm to route all nets
-        set<pIN> sorted_net;
-        for (size_t i = 0; i < _net_V.size(); i++)
-        {
-            long long int max_tdm = 0;
-            for (int j = 0; j < _net_V[i]->getGroupSize(); ++j)
-            {
-                max_tdm = max(max_tdm, _net_V[i]->getNetGroup(j)->getTDM());
+    while(true){
+        cout << " iteration:" << iteration << " section:" << section << endl;
+        if(iteration == 0){
+            //Initialize Edge's congestion to zero every iteration
+            for (size_t i = 0; i < _edge_V.size(); i++){
+                _edge_V[i]->initCongestion();
+                _edge_V[i]->resetNet();
             }
-            sorted_net.insert(pIN(max_tdm, _net_V[i]));
-        }    
-        local_router(true, sorted_net);
-        local_router(false, sorted_net);
+
+            //Use shortest path algorithm to route all nets
+            set<pIN> sorted_net;
+            for (size_t i = 0; i < _net_V.size(); i++)
+            {
+                int sub_net = 0;
+                for (int j = 0; j < _net_V[i]->getGroupSize(); ++j)
+                {
+                    sub_net = max(sub_net, _net_V[i]->getNetGroup(j)->getSubnetNum());
+                }
+                sorted_net.insert(pIN(sub_net, _net_V[i]));
+            }    
+            local_router(true, sorted_net);
+            local_router(false, sorted_net);
+        }
 
         for (size_t i = 0; i < _net_V.size(); i++) {
             _net_V[i]->clearEdgeTDM();
@@ -291,19 +299,30 @@ void TDM::global_router()
         //         _group_V[i]->getNet(j)->setX(x*prev_x);
         //     }
         // } 
+        // for(int i = 0; i < _group_V[0]->getNetNum)
 
         for(size_t i = 0; i < _net_V.size(); i++){
             double x = 0.0;
-            for(unsigned int j = 0; j < _net_V[i]->getGroupSize(); j++){
+            // bool belowAvg = false;
+            for(int j = 0; j < _net_V[i]->getGroupSize(); j++){
+                // if(_net_V[i]->getNetGroup(j)->getTDM() / avg_tdm < 1)
+                    // belowAvg = true;
                 x = max(x,_net_V[i]->getNetGroup(j)->getTDM() / avg_tdm);
+                // x += _net_V[i]->getNetGroup(j)->getTDM() / (avg_tdm * _net_V[i]->getGroupSize());
             }
+           
+            // if(belowAvg) 
+            //     x = log(x + 1);
+            
+            x = pow(1.5, x);
+            assert(x >= 0);
             double prev_x = _net_V[i]->getX();
             _net_V[i]->setX(x*prev_x);
         }
-
+        
+        // cout << _group_V[0]->getTDM() / avg_tdm << endl;
 
         //Terminate condition : Compare with minimum answer. If we can't update  minimum answer more than N times, terminate global router.
-        cout << " ...current:" << maxGroupTDM  <<  " | min:" << minimumTDM  <<endl;
         if (maxGroupTDM < minimumTDM) {
             //update minimum answer
             minimumTDM = maxGroupTDM;
@@ -324,10 +343,13 @@ void TDM::global_router()
                     _group_V[i]->updateTDM();
                 }
                 terminateCount = 0;
-                break;
+                // if(--section == 0) 
+                    break;
+                
             }       
         }
 
+        cout << " ...current:" << maxGroupTDM  <<  " | min:" << minimumTDM  <<endl;
         //Update edge's weight for next iteration
         // for (size_t i = 0; i < _edge_V.size(); i++) {
         //     _edge_V[i]->updateWeight(iteration);

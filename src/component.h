@@ -6,6 +6,7 @@
 #include <utility>
 #include <set>
 #include <map>
+#include <unordered_map>
 #include "math.h"
 
 #define pIF pair<int, FPGA*>
@@ -123,11 +124,11 @@ public:
     void      setMin_routetoEdge();
 
     // TDM function
-    int       getTDM(){ return _TDM;}
+    long long int getTDM(){ return _TDM;}
     int       getedgeTDM(int i){ return _edge_tdm[i];}
     void      updateMin_edge_TDM(){ Min_edge_tdm = _edge_tdm;}
-    void      setedgeTDM(int i,int c){_edge_tdm[i] = c;}
-    void      setTDM(int t){_TDM = t;}
+    void      setedgeTDM(int i,long long int c){_edge_tdm[i] = c;}
+    void      setTDM(long long int t){_TDM = t;}
     void      incrementTDM(int i) {_TDM = _TDM + i; }
     void      calculateTDM();
     void      calculateMinTDM();
@@ -143,21 +144,21 @@ public:
     void      addGroup(NetGroup* g) {_netgroup.push_back(g); }
     NetGroup* getNetGroup(unsigned i) {return _netgroup[i]; }
     int       getGroupSize() {return _netgroup.size();}
-    map<int,int> Min_edge_tdm; //edgeID -> TDM
+    unordered_map<int, long long int> Min_edge_tdm; //edgeID -> TDM
 
 private:
     bool      _isDominat;
     unsigned  _uid;
     double    _weight;
     double    _x;
-    int       _TDM;
     FPGA*     _source;
+    long long int      _TDM;
     vector<NetGroup*>  _netgroup;	
     vector<FPGA*>      _targets;
     vector<SubNet*>    _subnets;     //vector for Subnet
     vector<Edge*>      _cur_route;
     vector<Edge*>      _min_route;
-    map<int,int>       _edge_tdm;     //edgeID -> TDM
+    unordered_map<int,long long int>  _edge_tdm;     //edgeID -> TDM
 };
 
 class SubNet
