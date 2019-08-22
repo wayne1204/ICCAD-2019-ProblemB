@@ -29,7 +29,7 @@ $ ./cada0030 <input> <output>
 
 ### Evaluation
 ```
-$ ./evaluater_V3 <input> <output>
+$ ./evaluaterFast <input> <output>
 ```
 
 ### Result
