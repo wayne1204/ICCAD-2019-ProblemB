@@ -72,7 +72,7 @@ public:
     // edge weight
     float     getWeight(){return pow(2,_congestion/_AvgWeight);}
     void      updateWeight(int iteration);
-    void      addCongestion(){_congestion++;}
+    void      addCongestion(int i){_congestion += i;}
     void      initCongestion(){_congestion = 0;}
     int       getTableValue(int, int); 
 
@@ -133,6 +133,7 @@ public:
     void      calculateTDM();
     void      calculateMinTDM();
     void      clearEdgeTDM(){_edge_tdm.clear();}
+    void      initialEdgeTDM(int i){_edge_tdm.resize(i,0);}
     //void    updateMin_TDM(){_min_TDM = _TDM;}
     
     // subnet info
@@ -144,7 +145,8 @@ public:
     void      addGroup(NetGroup* g) {_netgroup.push_back(g); }
     NetGroup* getNetGroup(unsigned i) {return _netgroup[i]; }
     int       getGroupSize() {return _netgroup.size();}
-    unordered_map<int, long long int> Min_edge_tdm; //edgeID -> TDM
+    //unordered_map<int, long long int> Min_edge_tdm; //edgeID -> TDM
+    vector<long long int>Min_edge_tdm;
 
 private:
     bool      _isDominat;
@@ -158,7 +160,8 @@ private:
     vector<SubNet*>    _subnets;     //vector for Subnet
     vector<Edge*>      _cur_route;
     vector<Edge*>      _min_route;
-    unordered_map<int,long long int>  _edge_tdm;     //edgeID -> TDM
+   //unordered_map<int,long long int>  _edge_tdm;     //edgeID -> TDM
+    vector<long long int> _edge_tdm;
 };
 
 class SubNet

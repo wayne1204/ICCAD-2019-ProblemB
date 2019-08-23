@@ -32,14 +32,16 @@ void FPGA::showInfo(){
 void Net::calculateTDM(){
     _TDM = 0;
     for(auto it = _edge_tdm.begin();it!=_edge_tdm.end();++it){
-        _TDM += it->second;
+        //_TDM += it->second;
+        _TDM += *it;
     }
 }
 
 void Net::calculateMinTDM(){
     _TDM = 0;
     for(auto it = Min_edge_tdm.begin();it!=Min_edge_tdm.end();++it){
-        _TDM += it->second;
+        //_TDM += it->second;
+        _TDM += *it;
     }
 }
 
@@ -111,34 +113,13 @@ void Edge::updateWeight(int iteration){
 
 void Edge::distributeTDM(){
 
-    // multiset<pIN> sortedNet;
-    int rank = 0;
-  
-    // insert count dominant net
-    int dominantCnt = 0;
-    // for(size_t i = 0; i < _route.size(); i++){
-    //     Net* nn = _route[i];
-    //     int max_cost = 0;
-    //     // if(nn->isDominant()){
-    //     //     ++dominantCnt;
-    //     // }
-    //     for(int j = 0; j < nn->getGroupSize(); ++j){
-    //         NetGroup* ng = nn->getNetGroup(j);    
-    //         int cost = ng->getTDM();
-    //         max_cost = max(cost,max_cost);
-    //     }
-    //     // sortedNet.insert(pIN(max_cost,nn));
-    // }
-    
-    // for (auto it = sortedNet.begin(); it != sortedNet.end(); ++it){
+    // sort(_route.begin(), _route.end(), netCompare);
     double total_sum = 0, sum = 0;
-    sort(_route.begin(), _route.end(), netCompare);
     for(size_t i = 0; i < _route.size() ; ++i){
         if(!_route[i]->isDominant())
             sum += _route[i]->getWeight() * _route[i]->getX();
         total_sum += _route[i]->getWeight() * _route[i]->getX();
     }  
-    assert(total_sum > 0);
 
     double total_TDM = 1;
     size_t i;
@@ -211,7 +192,7 @@ void Net::setMin_routetoEdge(){
     Edge* e;
     for(size_t i=0;i<_min_route.size();i++){
         e = _min_route[i];
-        e->addCongestion();
+        e->addCongestion(1);
         e->addNet(this);
     }
 

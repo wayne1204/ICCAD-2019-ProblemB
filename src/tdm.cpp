@@ -6,7 +6,11 @@
 #include <math.h>
 #include <limits>
 #include <set>
+#include <time.h>
+#include <ext/pb_ds/priority_queue.hpp>
+
 #include "tdm.h"
+#include "../include/ctpl.h"
 
 using namespace std;
 
@@ -17,6 +21,13 @@ bool groupCompare(NetGroup* a, NetGroup* b) {
 bool netSubnetCompare(Net* a, Net* b) { 
     return (a->getSubnetNum() > b->getSubnetNum());
 }
+struct pdfCompare{
+    bool operator()(pDF a, pDF b){
+        return (a.first > b.first);
+    }
+};
+typedef __gnu_pbds::priority_queue<pDF, pdfCompare> my_pq;
+
 
 // parse input file
 bool TDM::parseFile(const char *fname)
@@ -159,11 +170,16 @@ bool TDM::outputFile(const char *fname)
         Net *n = _net_V[i];
         int edgeNum = n->getMin_routeNum();
         fs << edgeNum << endl;
-        pair<int, int> p;
+        /*pair<int, int> p;
         for (auto it = n->Min_edge_tdm.begin(); it != n->Min_edge_tdm.end(); ++it)
         {
             p = *it;
             fs << p.first << " " << p.second << endl;
+        }*/
+        for(size_t i = 0; i < n->Min_edge_tdm.size();i++){
+            if(n->Min_edge_tdm[i]!=0){
+                fs << i << " "<< n->Min_edge_tdm[i]<<endl;
+            }
         }
     }
     fs.close();
@@ -203,16 +219,28 @@ void TDM::showStatus(const char* fname)
         avg_subnet += ((double)_group_V[i]->getSubnetNum() / (int)_group_V.size());
     }
     for(auto it = sortedGroup.rbegin(); it != sortedGroup.rend(); ++it){
-        printf("[%6d] tdm:%lld net/subnet: %d/%d \n", it->second->getId(),
-               it->second->getTDM(), it->second->getNetNum(), it->second->getSubnetNum());
+        int edgeNum = 0;
+        for(int i = 0; i < it->second->getNetNum(); ++i){
+            edgeNum += it->second->getNet(i)->getMin_routeNum();
+        }
+        double ratio = (double)it->second->getTDM() / edgeNum;
+        printf("[%6d] tdm:%lld net/subnet: %d/%d ratio:%f \n", it->second->getId(),
+               it->second->getTDM(), it->second->getNetNum(), it->second->getSubnetNum(),
+               ratio);
         if(++cnt > 20)
             break;
     }
     cout << " ......  " <<endl;
     cnt = 0;
     for(auto it = sortedGroup.begin(); it != sortedGroup.end(); ++it){
-        printf("[%6d] tdm:%lld net/subnet: %d/%d \n", it->second->getId(),
-               it->second->getTDM(), it->second->getNetNum(), it->second->getSubnetNum());
+        int edgeNum = 0;
+        for(int i = 0; i < it->second->getNetNum(); ++i){
+            edgeNum += it->second->getNet(i)->getMin_routeNum();
+        }
+        double ratio = (double)it->second->getTDM() / edgeNum;
+        printf("[%6d] tdm:%lld net/subnet: %d/%d ratio:%f \n", it->second->getId(),
+               it->second->getTDM(), it->second->getNetNum(), it->second->getSubnetNum()
+               , ratio);
         if(++cnt > 20)
             break;
     }
@@ -238,16 +266,19 @@ void TDM::global_router()
     cout << " [routing] \n";
     long long int minimumTDM = numeric_limits<long long int>::max();
     int iteration = 0, terminateCount = 0, section = 0;
-    // if(_net_V.size() < 300000)
-    //     section = 1;
-    // else if (_net_V.size() < 500000)
-    //     section = 2;
-    // else
-    //     section = 3;
+
+    if(_net_V.size() < 300000)
+        section = 1;
+    else if (_net_V.size() < 500000)
+        section = 2;
+    else
+        section = 3;
     
     _pathcheck_V.reserve(_FPGA_V.size());
+
     while(true){
-        cout << " iteration:" << iteration << " section:" << section << endl;
+        clock_t start, end;
+        start = clock();
         if(iteration == 0){
             //Initialize Edge's congestion to zero every iteration
             for (size_t i = 0; i < _edge_V.size(); i++){
@@ -272,56 +303,48 @@ void TDM::global_router()
 
         for (size_t i = 0; i < _net_V.size(); i++) {
             _net_V[i]->clearEdgeTDM();
+            _net_V[i]->initialEdgeTDM((int)_edge_V.size());
         }
 
         //Distribute all TDM and calculate all TDM
-        // cout << " ...[Distribute TDM] " << endl;
+        ctpl::thread_pool p(8);
         for (size_t i = 0; i < _edge_V.size(); i++){
-            _edge_V[i]->distributeTDM();
+            //_edge_V[i]->distributeTDM();
+            p.push([](int id, Edge* e){e->distributeTDM();}, _edge_V[i]);
         }
-
+        p.stop(true);
         for (size_t i = 0; i < _net_V.size(); i++){
             _net_V[i]->calculateTDM();
         }
 
         long long int maxGroupTDM = 0;
+        int group_id = -1;
         double avg_tdm = 0;
         for (size_t i = 0; i < _group_V.size(); i++){
             _group_V[i]->updateTDM();
-            maxGroupTDM = max(maxGroupTDM, _group_V[i]->getTDM());
+            if(_group_V[i]->getTDM() > maxGroupTDM){
+                maxGroupTDM = _group_V[i]->getTDM();
+                group_id = i;
+            }
             avg_tdm += (double)_group_V[i]->getTDM() / (int)_group_V.size();
         }
-
-        // for (size_t i = 0; i < _group_V.size(); i++){
-        //     double x = _group_V[i]->getTDM() / avg_tdm;
-        //     for(int j = 0; j < _group_V[i]->getNetNum(); ++j){
-        //         double prev_x = _group_V[i]->getNet(j)->getX();
-        //         _group_V[i]->getNet(j)->setX(x*prev_x);
-        //     }
-        // } 
-        // for(int i = 0; i < _group_V[0]->getNetNum)
+        
 
         for(size_t i = 0; i < _net_V.size(); i++){
             double x = 0.0;
-            // bool belowAvg = false;
             for(int j = 0; j < _net_V[i]->getGroupSize(); j++){
-                // if(_net_V[i]->getNetGroup(j)->getTDM() / avg_tdm < 1)
-                    // belowAvg = true;
                 x = max(x,_net_V[i]->getNetGroup(j)->getTDM() / avg_tdm);
-                // x += _net_V[i]->getNetGroup(j)->getTDM() / (avg_tdm * _net_V[i]->getGroupSize());
             }
            
             // if(belowAvg) 
             //     x = log(x + 1);
             
-            x = pow(1.5, x);
+            x = pow(x, section);
             assert(x >= 0);
             double prev_x = _net_V[i]->getX();
             _net_V[i]->setX(x*prev_x);
         }
         
-        // cout << _group_V[0]->getTDM() / avg_tdm << endl;
-
         //Terminate condition : Compare with minimum answer. If we can't update  minimum answer more than N times, terminate global router.
         if (maxGroupTDM < minimumTDM) {
             //update minimum answer
@@ -343,13 +366,16 @@ void TDM::global_router()
                     _group_V[i]->updateTDM();
                 }
                 terminateCount = 0;
-                // if(--section == 0) 
+                if(--section == 0){
                     break;
-                
+                }
             }       
         }
 
-        cout << " ...current:" << maxGroupTDM  <<  " | min:" << minimumTDM  <<endl;
+        end = clock();
+        double t =  ((double) (end - start)) / CLOCKS_PER_SEC;
+        printf(" #%d section:%d  current: %lld (id:%d)| min: %lld time:%.3f \n", 
+        iteration, section, maxGroupTDM, group_id, minimumTDM, t);
         //Update edge's weight for next iteration
         // for (size_t i = 0; i < _edge_V.size(); i++) {
         //     _edge_V[i]->updateWeight(iteration);
@@ -411,19 +437,23 @@ struct pDFcomp {
 //single source single target shortest path algortihm
 void TDM::Dijkstras(FPGA *source, FPGA *target, unsigned int num, stack<pFE>&route)
 {
-    set<pDF,pDFcomp> Q;
     float maxf = numeric_limits<float>::max();
+
+    my_pq Q;
+    my_pq::point_iterator iter_V [num];
     vector<float> d(num, maxf); //distance
     vector<pFE> parent(num);    //Record the parentId and edge of each FPGA after Dijkstras
+
     d[source->getId()] = 0.0;
     parent[source->getId()] = pFE(source, NULL);
-    Q.insert(pDF(d[source->getId()], source));
+    iter_V[source->getId()] = Q.push(pDF(d[source->getId()], source));
 
     FPGA *a = NULL;
     while (!Q.empty())
     {
-        pIF top = *Q.begin();
-        Q.erase(Q.begin());
+        pDF top = Q.top();
+        Q.pop();
+        
         a = top.second;
         if (a == target)
             break; //Find the target
@@ -440,17 +470,19 @@ void TDM::Dijkstras(FPGA *source, FPGA *target, unsigned int num, stack<pFE>&rou
             w = e->getWeight();
             if (d[a->getId()] + w < d[b->getId()])
             {
-                if (d[b->getId()] != maxf)
-                {
-                    Q.erase(Q.find(pDF(d[b->getId()], b)));
-                }
+                float distance = d[b->getId()];
                 d[b->getId()] = d[a->getId()] + w;
                 parent[b->getId()] = pFE(a, e);
-                Q.insert(pDF(d[b->getId()], b));
+
+                if (distance == maxf){
+                    iter_V[b->getId()] = Q.push(pDF(d[b->getId()], b));
+                }
+                else{
+                    Q.modify(iter_V[b->getId()], pDF(d[b->getId()], b));
+                }
             }
         }
     }
-    //stack<pFE> route;
     route.push(pFE(a, NULL));
     while (a != parent[a->getId()].first)
     {
@@ -480,6 +512,7 @@ void TDM::local_router(bool b, set<pIN>& sorted_net)
     // for (size_t i = 0; i < _net_V.size(); i++)
     {
         Net *n = rit->second;
+        int c = n->isDominant() ? 10 : 1;
         if(n->isDominant() && !b)
             continue;
         else if(!n->isDominant() && b)
@@ -517,7 +550,7 @@ void TDM::local_router(bool b, set<pIN>& sorted_net)
                 _pathcheck_V[connectFPGA->getId()] = true;
                 if (connectEdge != NULL)
                 {
-                    connectEdge->addCongestion();
+                    connectEdge->addCongestion(c);
                     n->addEdgetoCur_route(connectEdge);
                     connectEdge->addNet(n);
                     // cout<<connectEdge->getId()<<" "<<connectEdge->getCongestion()<<endl;
@@ -537,7 +570,7 @@ void TDM::local_router(bool b, set<pIN>& sorted_net)
                     _pathcheck_V[connectFPGA->getId()] = true;
                     if (connectEdge != NULL)
                     {
-                        connectEdge->addCongestion();
+                        connectEdge->addCongestion(c);
                         n->addEdgetoCur_route(connectEdge);
                         connectEdge->addNet(n);
                     }

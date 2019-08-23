@@ -1,6 +1,6 @@
 CC=g++
-CFLAGS = -Wall -O2 -std=c++11  
-# CFLAGS = -Wall -g -std=c++11 
+CFLAGS = -Wall -pthread -fPIC -O2 -std=c++11  
+# CFLAGS = -Wall -lpthread fPIC -g -std=c++11 
 
 EXE = cada0030
 OBJ = main.o tdm.o component.o
