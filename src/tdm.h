@@ -20,7 +20,7 @@ class TDM
     void showStatus(const char* fname);
     void updatekRatio();  
     void decomposeNet(char* fname);
-    void global_router();
+    void global_router(char* fname);
 
     private:
     size_t getToken(size_t pos, string& s, string& token);
@@ -29,6 +29,7 @@ class TDM
     void local_router(bool b, set<pIN>&);
     int _domiantGroupCount;  // number of dominat count
     vector<FPGA*> _FPGA_V;
+    vector<vector<unsigned char> > _distance;
     vector<Edge*> _edge_V;
     vector<Net*> _net_V;
     vector<NetGroup*> _group_V;

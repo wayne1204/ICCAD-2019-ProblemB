@@ -2,6 +2,8 @@
 .DS_Store
 input/synopsys*
 output/*
+figure/*
+log/*
 
 cada0030
 *.o

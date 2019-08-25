@@ -20,7 +20,7 @@ int main(int argc, char** argv){
     }
     tdm.decomposeNet(argv[1]);
     tdm.findDominantGroup();
-    tdm.global_router();
+    tdm.global_router(argv[2]);
     tdm.showStatus(argv[1]);
     tdm.outputFile(argv[2]);
     return 0;

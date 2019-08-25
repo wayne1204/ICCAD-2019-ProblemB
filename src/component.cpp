@@ -86,7 +86,7 @@ void Net::decomposition(){
 
 void Net::setWeight(double w){
     if(w > _weight)
-        _weight = w;
+        _weight = w ;
 }
 
 void Net::setX(double x){
@@ -116,29 +116,30 @@ void Edge::distributeTDM(){
     // sort(_route.begin(), _route.end(), netCompare);
     double total_sum = 0, sum = 0;
     for(size_t i = 0; i < _route.size() ; ++i){
-        if(!_route[i]->isDominant())
+        if(!_route[i]->isDominant()){
             sum += _route[i]->getWeight() * _route[i]->getX();
+        }
         total_sum += _route[i]->getWeight() * _route[i]->getX();
     }  
 
     double total_TDM = 1;
     size_t i;
     for(i = 0; i < _route.size() ; ++i){
-        if(_route[i]->isDominant()){
+        // if(_route[i]->isDominant()){
             long long int new_tdm = ceil(total_sum/(_route[i]->getWeight() * _route[i]->getX()));
             new_tdm = (new_tdm % 2 == 0) ? new_tdm : new_tdm + 1;
             assert(new_tdm > 0);
             _route[i]->setedgeTDM(_uid, new_tdm);
             total_TDM -= 1.0/(double)new_tdm;
-        }
-        else break;
+        // }
+        // else break;
     }
-    for(; i < _route.size() ; ++i){
-        long long int new_tdm = ceil( (sum/(_route[i]->getWeight() * _route[i]->getX()))*(1.0/total_TDM) );
-        new_tdm = (new_tdm % 2 == 0) ? new_tdm : new_tdm + 1;
-        assert(new_tdm > 0);
-        _route[i]->setedgeTDM(_uid, new_tdm);
-    }
+    // for(; i < _route.size() ; ++i){
+    //     long long int new_tdm = ceil( (sum/(_route[i]->getWeight() * _route[i]->getX()))*(1.0/total_TDM) );
+    //     new_tdm = (new_tdm % 2 == 0) ? new_tdm : new_tdm + 1;
+    //     assert(new_tdm > 0);
+    //     _route[i]->setedgeTDM(_uid, new_tdm);
+    // }
         // exist dominant group
         // if(dominantCnt){
         //     if(nn->isDominant()){

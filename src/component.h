@@ -70,7 +70,7 @@ public:
     unsigned  getId() {return _uid;}
 
     // edge weight
-    float     getWeight(){return pow(2,_congestion/_AvgWeight);}
+    double    getWeight(){return pow(2, _congestion/_AvgWeight);}
     void      updateWeight(int iteration);
     void      addCongestion(int i){_congestion += i;}
     void      initCongestion(){_congestion = 0;}
@@ -108,6 +108,7 @@ public:
     void      setSource(FPGA* f) { _source = f;}
     void      setTarget(FPGA* f) { _targets.push_back(f);}
     void      setDominant() {_isDominat = true;}
+    void      setNonDominat() {_isDominat = false;}
     bool      isDominant() {return _isDominat;}
     void      setWeight(double w);
     double    getWeight() {return _weight;}
