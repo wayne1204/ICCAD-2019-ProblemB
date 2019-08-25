@@ -34,3 +34,8 @@ $ ./evaluaterFast <input> <output>
 
 ### Result
 https://docs.google.com/spreadsheets/d/16-W2OZZZRlo_uKKbR1mh9Ab0Xff4AxLhppvCP39IYpM/edit?usp=sharing
+
+
+
+### Figure
+https://drive.google.com/drive/folders/1oXdPK_5916hqx7mMWouMvtyvVqhHSo-C?usp=sharing
