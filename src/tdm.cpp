@@ -372,6 +372,12 @@ void TDM::global_router(char* fname)
             local_router(true, sorted_net);
             local_router(false, sorted_net);
         }
+        else if(iteration < 5){
+            //for (size_t i = 0; i < _edge_V.size(); i++){
+             //   _edge_V[i]->initCongestion();
+            //}
+            ripup_reroute(sorted_net);
+        }
 
         for (size_t i = 0; i < _net_V.size(); i++) {
             _net_V[i]->clearEdgeTDM();
@@ -419,7 +425,7 @@ void TDM::global_router(char* fname)
                 x = max(x,_net_V[i]->getNetGroup(j)->getTDM() / avg_group_tdm);
             }
            
-            x = pow(x, section);
+            // x = pow(x, section);
             assert(x >= 0);
             double prev_x = _net_V[i]->getX();
             _net_V[i]->setX(x*prev_x);
@@ -436,7 +442,8 @@ void TDM::global_router(char* fname)
             // terminateCount = 0;
         }
         else{
-            terminateCount++;
+            if(iteration >5)
+                terminateCount++;
             if (terminateCount > 3){
                 for (size_t i = 0; i < _net_V.size(); i++){
                     _net_V[i]->calculateMinTDM();
@@ -570,6 +577,94 @@ void TDM::Dijkstras(FPGA *source, FPGA *target, unsigned int num, stack<pFE>&rou
         a = parent[a->getId()].first;
     }
     //return route;
+}
+
+
+void TDM::ripup_reroute(set<pIN>& sorted_net)
+{
+
+
+    for (auto it = sorted_net.begin(); it != sorted_net.end(); ++it){
+
+        Net *n = it->second;
+
+        if(!n->isDominant()){
+            continue;
+        }
+
+        int c = n->isDominant() ? 2: 1;
+        // int c = n->getWeight();
+
+        for(int j = 0; j < n->getCur_routeNum(); ++j){
+            n->getCur_route(j)->removeNet(n);
+            n->getCur_route(j)->addCongestion(c*(-1));
+        }
+
+        
+        
+
+        // Net *n = _net_V[i];
+        _pathcheck_V.clear();
+        _pathcheck_V.resize(_FPGA_V.size(), false);
+        n->initializeCur_route();
+        // cout<<"Net "<<n->getId()<<endl;
+        for (int j = 0; j < n->getSubnetNum(); j++)
+        {
+            SubNet *sn = n->getSubNet(j);
+            FPGA *source = sn->getSource();
+            FPGA *target = sn->getTarget();
+            if (_pathcheck_V[source->getId()] && _pathcheck_V[target->getId()])
+                continue;
+            else if (_pathcheck_V[source->getId()] && !_pathcheck_V[target->getId()])
+            { // We can swap source and target in order to efficiently find steiner point
+                FPGA *temp = source;
+                source = target;
+                target = temp;
+            }
+            //stack<pFE> route_S = Dijkstras(source, target, _FPGA_V.size());
+            stack<pFE> route_S;
+            Dijkstras(source, target, _FPGA_V.size(), route_S);
+
+            FPGA *connectFPGA;
+            Edge *connectEdge;
+            while (!route_S.empty())
+            {
+                pFE p = route_S.top();
+                route_S.pop();
+                connectFPGA = p.first;
+                connectEdge = p.second;
+                _pathcheck_V[connectFPGA->getId()] = true;
+                if (connectEdge != NULL)
+                {
+                    connectEdge->addCongestion(c);
+                    n->addEdgetoCur_route(connectEdge);
+                    connectEdge->addNet(n);
+                    // cout<<connectEdge->getId()<<" "<<connectEdge->getCongestion()<<endl;
+                }
+            }
+            if (!_pathcheck_V[target->getId()])
+            { // target is not connected
+                //route_S = Dijkstras(target, source, _FPGA_V.size());
+                stack<pFE> route_S2;
+                Dijkstras(target, source, _FPGA_V.size(), route_S2);
+                while (!route_S2.empty())
+                {
+                    pFE p = route_S2.top();
+                    route_S2.pop();
+                    connectFPGA = p.first;
+                    connectEdge = p.second;
+                    _pathcheck_V[connectFPGA->getId()] = true;
+                    if (connectEdge != NULL)
+                    {
+                        connectEdge->addCongestion(c);
+                        n->addEdgetoCur_route(connectEdge);
+                        connectEdge->addNet(n);
+                    }
+                }
+            }
+        }
+    }
+
 }
 
 //route all nets by Dijkstras algorithm

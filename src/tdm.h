@@ -24,9 +24,10 @@ class TDM
 
     private:
     size_t getToken(size_t pos, string& s, string& token);
-    //stack<pFE> Dijkstras(FPGA* source,FPGA* target,unsigned int num);
+    stack<pFE> Dijkstras(FPGA* source,FPGA* target,unsigned int num);
     void Dijkstras(FPGA* source,FPGA* target,unsigned int num, stack<pFE>&route);
     void local_router(bool b, set<pIN>&);
+    void ripup_reroute(set<pIN>&);
     int _domiantGroupCount;  // number of dominat count
     vector<FPGA*> _FPGA_V;
     vector<vector<unsigned char> > _distance;

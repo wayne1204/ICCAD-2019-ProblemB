@@ -153,6 +153,11 @@ int Edge::getTableValue(int congestion, int rank){
     
 }
 
+void Edge::removeNet(Net* n){
+    auto it = std::find(_route.begin(), _route.end(), n);
+    _route.erase(it);
+}
+
 void NetGroup::updateTDM(){
     _TDM = 0;
     for (size_t i = 0; i < _nets.size(); ++i){

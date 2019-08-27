@@ -82,6 +82,7 @@ public:
     // route
     void      resetNet(){_route.clear();}
     void      addNet(Net* n){_route.push_back(n);}
+    void      removeNet(Net* n);
     void      distributeTDM();
 
     static float   _AvgWeight;
@@ -125,6 +126,7 @@ public:
     int       getMin_routeNum(){ return _min_route.size();}
     void      updateMin_route(){ _min_route = _cur_route;}
     void      setMin_routetoEdge();
+    Edge*     getCur_route(int i){return _cur_route[i];}
 
     // TDM function
     long long int getTDM(){ return _TDM;}
