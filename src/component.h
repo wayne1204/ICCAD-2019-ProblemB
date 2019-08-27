@@ -30,7 +30,7 @@ class FPGA
 public:
     FPGA(unsigned id){
         _uid = id;
-        _visited = false;
+        _visit = 0;
         _parent = NULL;
     }
     // basic info
@@ -42,14 +42,16 @@ public:
     void       showInfo();
 
     // for decompostion
-    void       setVisited(bool b) {_visited = b; }
-    bool       isVisited() {return _visited; }
+    static void setGlobalVisit() {_globalVisit++; }
+    void       setVisited(bool b) {_visit = _globalVisit; }
+    bool       isVisited() {return _visit == _globalVisit; }
     void       setParent(FPGA* p) {_parent = p;}
     FPGA*      getParent() {return _parent;}
 
 
 private:
-    bool         _visited;
+    static  unsigned _globalVisit;
+    unsigned     _visit;
     unsigned     _uid;
     FPGA*        _parent;
     vector<pFE>  _connection;
@@ -136,8 +138,9 @@ public:
     void      setTDM(long long int t){_TDM = t;}
     void      calculateTDM();
     void      calculateMinTDM();
-    void      clearEdgeTDM(){_edge_tdm.clear();}
-    void      initialEdgeTDM(int i){_edge_tdm.resize(i,0);}
+    // void      clearEdgeTDM(){_edge_tdm.clear();}
+    void      initEdgeTDM(int size);
+    void      clearEdgeTDM();
     //void    updateMin_TDM(){_min_TDM = _TDM;}
     
     // subnet info

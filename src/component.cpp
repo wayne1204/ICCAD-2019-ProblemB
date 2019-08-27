@@ -8,8 +8,9 @@
 #include "component.h"
 #include <cassert>
 
-float   Edge::_AvgWeight = 0.0;
-double  Edge::_kRatio = 1;
+float    Edge::_AvgWeight = 0.0;
+unsigned FPGA::_globalVisit = 0;
+double   Edge::_kRatio = 1;
 
 bool netCompare(Net* a, Net* b) { 
     return (a->getWeight() > b->getWeight());
@@ -91,6 +92,13 @@ void Net::setWeight(double w){
         _weight = w ;
 }
 
+void Net::initEdgeTDM(int size){
+    _edge_tdm.resize(size, 0);
+}
+
+void Net::clearEdgeTDM(){
+    fill(_edge_tdm.begin(), _edge_tdm.end(), 0);
+}
 
 void Net::showInfo(){
     cout << "[ Net #" << _uid <<  " ]\n";

@@ -5,7 +5,7 @@
 #include <set>
 #include <math.h>
 #include <limits>
-#include <set>
+#include <unordered_set>
 #include <time.h>
 #include <ext/pb_ds/priority_queue.hpp>
 
@@ -56,6 +56,7 @@ bool TDM::parseFile(const char *fname)
     {
         _FPGA_V.push_back(new FPGA(i));
     }
+    _pathcheck_V.resize(_FPGA_V.size(), false);
 
     // edge
     _edge_V.reserve(nums[1]);
@@ -88,6 +89,7 @@ bool TDM::parseFile(const char *fname)
             begin = getToken(begin, line, token);
             n->setTarget(_FPGA_V[stoi(token)]);
         }
+        n->initEdgeTDM(nums[1]);
         _net_V.push_back(n);
     }
 
@@ -116,9 +118,10 @@ bool TDM::parseFile(const char *fname)
     }
 
     for(size_t i = 0; i < _FPGA_V.size(); ++i){
-        for(size_t j = 0; j < _FPGA_V.size(); ++j){
-            _FPGA_V[j]->setVisited(false);
-        }
+        FPGA::setGlobalVisit();
+        // for(size_t j = 0; j < _FPGA_V.size(); ++j){
+        //     _FPGA_V[j]->setVisited(false);
+        // }
         queue<FPGA*> Q;
         Q.push(_FPGA_V[i]);
         _FPGA_V[i]->setVisited(true);
@@ -169,24 +172,22 @@ bool TDM::parseFile(const char *fname)
 // find domimant group
 void TDM::findDominantGroup(){
     sort(_group_V.begin(), _group_V.end(), groupCompare);
-    double avg_net = 0.0, avg_subnet = 0.0;
     for(size_t i = 0; i < _group_V.size(); ++i){
-        avg_net += ((double)_group_V[i]->getNetNum() / _group_V.size());
-        avg_subnet += ((double)_group_V[i]->getSubnetNum() / _group_V.size());
+        _avg_net += ((double)_group_V[i]->getNetNum() / _group_V.size());
+        _avg_subnet += ((double)_group_V[i]->getSubnetNum() / _group_V.size());
     }
     int i = 0;
     cout << " Dominant group #" << _group_V[0]->getId() << " subnets:" << _group_V[0]->getSubnetNum() <<endl;
-    cout << " avg_net:" << avg_net << " avg_subnet:"<< avg_subnet << endl;
-    cout << endl; 
+    cout << " avg_net:" << _avg_net << " avg_subnet:"<< _avg_subnet << endl;
+    cout << endl;
 
-    while(_group_V[i]->getSubnetNum() > 3 * avg_subnet){
+    while(_group_V[i]->getNetNum() > 3 * _avg_subnet){
         _group_V[i]->setDominant();
         ++_domiantGroupCount;
         ++i;
     }
-
     for(size_t i = 0; i < _group_V.size(); ++i){
-        double w = (double)_group_V[i]->getSubnetNum() / avg_subnet;
+        double w = (double)_group_V[i]->getSubnetNum() / _avg_subnet;
         for(int j = 0; j < _group_V[i]->getNetNum(); ++j){
             _group_V[i]->getNet(j)->setWeight(w);
         }
@@ -280,15 +281,19 @@ void TDM::showStatus(const char* fname)
     cout << "  dominant group use edges:" << total_edge << endl;
 
 
-    double avg_tdm = 0.0, avg_net = 0.0, avg_subnet = 0.0;
+    double avg_tdm = 0.0;
     int cnt = 0;
     set<pLG> sortedGroup;
     for(size_t i = 0; i < _group_V.size(); ++i){
         sortedGroup.insert(pLG(_group_V[i]->getTDM(), _group_V[i]));
         avg_tdm += ((double)_group_V[i]->getTDM() / (int)_group_V.size());
-        avg_net += ((double)_group_V[i]->getNetNum() / (int)_group_V.size());
-        avg_subnet += ((double)_group_V[i]->getSubnetNum() / (int)_group_V.size());
     }
+    // for(int i = 0; i < _group_V[0]->getNetNum(); ++i){
+    //     if(_group_V[0]->getNet(i)->getSubnetNum() > 50){
+    //         cout << i << " edge" << _group_V[0]->getNet(i)->getMin_routeNum() << " "
+    //             << _group_V[0]->getNet(i)->getSubnetNum() << endl;
+    //     }
+    // }
     for(auto it = sortedGroup.rbegin(); it != sortedGroup.rend(); ++it){
         int edgeNum = 0;
         for(int i = 0; i < it->second->getNetNum(); ++i){
@@ -315,7 +320,7 @@ void TDM::showStatus(const char* fname)
         if(++cnt > 20)
             break;
     }
-    cout << "[ avg  ] tdm:" << avg_tdm << " net:" << avg_net << " subnet:"<< avg_subnet << endl;
+    cout << "[ avg  ] tdm:" << avg_tdm << " net:" << _avg_net << " subnet:"<< _avg_subnet << endl;
     if (verbose)
     {
         for (size_t i = 0; i < _FPGA_V.size(); ++i)
@@ -380,8 +385,9 @@ void TDM::global_router(char* fname)
         }
 
         for (size_t i = 0; i < _net_V.size(); i++) {
+            // _net_V[i]->clearEdgeTDM();
+            // _net_V[i]->initialEdgeTDM((int)_edge_V.size());
             _net_V[i]->clearEdgeTDM();
-            _net_V[i]->initialEdgeTDM((int)_edge_V.size());
         }
 
         //Distribute all TDM and calculate all TDM
@@ -522,9 +528,10 @@ struct pDFcomp {
  };
 
 //single source single target shortest path algortihm
-void TDM::Dijkstras(FPGA *source, FPGA *target, unsigned int num, stack<pFE>&route)
+void TDM::Dijkstras(FPGA *source, FPGA *target, unsigned int num, Net* n)
 {
     float maxf = numeric_limits<float>::max();
+    int c = n->isDominant() ? 2: 1;
     my_pq Q;
     my_pq::point_iterator iter_V [num];
     vector<float> d(num, maxf); //distance
@@ -570,28 +577,31 @@ void TDM::Dijkstras(FPGA *source, FPGA *target, unsigned int num, stack<pFE>&rou
             }
         }
     }
-    route.push(pFE(a, NULL));
+
+    _pathcheck_V[a->getId()] = true;
     while (a != parent[a->getId()].first)
     {
-        route.push(parent[a->getId()]);
+        FPGA* connectFPGA = parent[a->getId()].first;
+        Edge* connectEdge = parent[a->getId()].second;
+        _pathcheck_V[connectFPGA->getId()] = true;
+        // if(connectEdge != NULL){
+            connectEdge->addCongestion(c);
+            n->addEdgetoCur_route(connectEdge);
+            connectEdge->addNet(n);
+        // }
         a = parent[a->getId()].first;
     }
-    //return route;
+    // cout << ++times << endl;
 }
 
 
 void TDM::ripup_reroute(set<pIN>& sorted_net)
 {
-
-
     for (auto it = sorted_net.begin(); it != sorted_net.end(); ++it){
-
         Net *n = it->second;
-
         if(!n->isDominant()){
             continue;
         }
-
         int c = n->isDominant() ? 2: 1;
         // int c = n->getWeight();
 
@@ -599,9 +609,6 @@ void TDM::ripup_reroute(set<pIN>& sorted_net)
             n->getCur_route(j)->removeNet(n);
             n->getCur_route(j)->addCongestion(c*(-1));
         }
-
-        
-        
 
         // Net *n = _net_V[i];
         _pathcheck_V.clear();
@@ -622,45 +629,45 @@ void TDM::ripup_reroute(set<pIN>& sorted_net)
                 target = temp;
             }
             //stack<pFE> route_S = Dijkstras(source, target, _FPGA_V.size());
-            stack<pFE> route_S;
-            Dijkstras(source, target, _FPGA_V.size(), route_S);
+            // stack<pFE> route_S;
+            Dijkstras(source, target, _FPGA_V.size(), n);
 
-            FPGA *connectFPGA;
-            Edge *connectEdge;
-            while (!route_S.empty())
-            {
-                pFE p = route_S.top();
-                route_S.pop();
-                connectFPGA = p.first;
-                connectEdge = p.second;
-                _pathcheck_V[connectFPGA->getId()] = true;
-                if (connectEdge != NULL)
-                {
-                    connectEdge->addCongestion(c);
-                    n->addEdgetoCur_route(connectEdge);
-                    connectEdge->addNet(n);
-                    // cout<<connectEdge->getId()<<" "<<connectEdge->getCongestion()<<endl;
-                }
-            }
+            // FPGA *connectFPGA;
+            // Edge *connectEdge;
+            // while (!route_S.empty())
+            // {
+            //     pFE p = route_S.top();
+            //     route_S.pop();
+            //     connectFPGA = p.first;
+            //     connectEdge = p.second;
+            //     _pathcheck_V[connectFPGA->getId()] = true;
+            //     if (connectEdge != NULL)
+            //     {
+            //         connectEdge->addCongestion(c);
+            //         n->addEdgetoCur_route(connectEdge);
+            //         connectEdge->addNet(n);
+            //         // cout<<connectEdge->getId()<<" "<<connectEdge->getCongestion()<<endl;
+            //     }
+            // }
             if (!_pathcheck_V[target->getId()])
             { // target is not connected
                 //route_S = Dijkstras(target, source, _FPGA_V.size());
-                stack<pFE> route_S2;
-                Dijkstras(target, source, _FPGA_V.size(), route_S2);
-                while (!route_S2.empty())
-                {
-                    pFE p = route_S2.top();
-                    route_S2.pop();
-                    connectFPGA = p.first;
-                    connectEdge = p.second;
-                    _pathcheck_V[connectFPGA->getId()] = true;
-                    if (connectEdge != NULL)
-                    {
-                        connectEdge->addCongestion(c);
-                        n->addEdgetoCur_route(connectEdge);
-                        connectEdge->addNet(n);
-                    }
-                }
+                // stack<pFE> route_S2;
+                Dijkstras(target, source, _FPGA_V.size(), n);
+                // while (!route_S2.empty())
+                // {
+                //     pFE p = route_S2.top();
+                //     route_S2.pop();
+                //     connectFPGA = p.first;
+                //     connectEdge = p.second;
+                //     _pathcheck_V[connectFPGA->getId()] = true;
+                //     if (connectEdge != NULL)
+                //     {
+                //         connectEdge->addCongestion(c);
+                //         n->addEdgetoCur_route(connectEdge);
+                //         connectEdge->addNet(n);
+                //     }
+                // }
             }
         }
     }
@@ -675,7 +682,7 @@ void TDM::local_router(bool b, set<pIN>& sorted_net)
     // for (size_t i = 0; i < _net_V.size(); i++)
     {
         Net *n = it->second;
-        int c = n->isDominant() ? 2: 1;
+        // int c = n->isDominant() ? 2: 1;
         if(n->isDominant() && !b)
             continue;
         else if(!n->isDominant() && b)
@@ -699,45 +706,46 @@ void TDM::local_router(bool b, set<pIN>& sorted_net)
                 target = temp;
             }
             //stack<pFE> route_S = Dijkstras(source, target, _FPGA_V.size());
-            stack<pFE> route_S;
-            Dijkstras(source, target, _FPGA_V.size(), route_S);
+            // stack<pFE> route_S;
+            Dijkstras(source, target, _FPGA_V.size(), n);
 
-            FPGA *connectFPGA;
-            Edge *connectEdge;
-            while (!route_S.empty())
-            {
-                pFE p = route_S.top();
-                route_S.pop();
-                connectFPGA = p.first;
-                connectEdge = p.second;
-                _pathcheck_V[connectFPGA->getId()] = true;
-                if (connectEdge != NULL)
-                {
-                    connectEdge->addCongestion(c);
-                    n->addEdgetoCur_route(connectEdge);
-                    connectEdge->addNet(n);
-                    // cout<<connectEdge->getId()<<" "<<connectEdge->getCongestion()<<endl;
-                }
-            }
+            // FPGA *connectFPGA;
+            // Edge *connectEdge;
+            // while (!route_S.empty())
+            // {
+            //     pFE p = route_S.top();
+            //     route_S.pop();
+            //     connectFPGA = p.first;
+            //     connectEdge = p.second;
+            //     _pathcheck_V[connectFPGA->getId()] = true;
+            //     if (connectEdge != NULL)
+            //     {
+            //         connectEdge->addCongestion(c);
+            //         n->addEdgetoCur_route(connectEdge);
+            //         connectEdge->addNet(n);
+            //         // cout<<connectEdge->getId()<<" "<<connectEdge->getCongestion()<<endl;
+            //     }
+            // }
             if (!_pathcheck_V[target->getId()])
             { // target is not connected
                 //route_S = Dijkstras(target, source, _FPGA_V.size());
-                stack<pFE> route_S2;
-                Dijkstras(target, source, _FPGA_V.size(), route_S2);
-                while (!route_S2.empty())
-                {
-                    pFE p = route_S2.top();
-                    route_S2.pop();
-                    connectFPGA = p.first;
-                    connectEdge = p.second;
-                    _pathcheck_V[connectFPGA->getId()] = true;
-                    if (connectEdge != NULL)
-                    {
-                        connectEdge->addCongestion(c);
-                        n->addEdgetoCur_route(connectEdge);
-                        connectEdge->addNet(n);
-                    }
-                }
+                // stack<pFE> route_S2;
+                cout << "target is not connectted\n";
+                Dijkstras(target, source, _FPGA_V.size(), n);
+                // while (!route_S2.empty())
+                // {
+                //     pFE p = route_S2.top();
+                //     route_S2.pop();
+                //     connectFPGA = p.first;
+                //     connectEdge = p.second;
+                //     _pathcheck_V[connectFPGA->getId()] = true;
+                //     if (connectEdge != NULL)
+                //     {
+                //         connectEdge->addCongestion(c);
+                //         n->addEdgetoCur_route(connectEdge);
+                //         connectEdge->addNet(n);
+                //     }
+                // }
             }
         }
     }
