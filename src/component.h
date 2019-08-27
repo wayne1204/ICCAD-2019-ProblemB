@@ -49,10 +49,10 @@ public:
 
 
 private:
-    bool      _visited;
-    unsigned  _uid;
-    FPGA*     _parent;
-    vector<pFE> _connection;
+    bool         _visited;
+    unsigned     _uid;
+    FPGA*        _parent;
+    vector<pFE>  _connection;
 };
 
 // FPGA connections
@@ -68,6 +68,8 @@ public:
     // basic info
     void      setVertex(FPGA* f1, FPGA* f2) {_source = f1; _target = f2;}
     unsigned  getId() {return _uid;}
+    FPGA*     getSource() {return _source;}
+    FPGA*     getTarget() {return _target;}
 
     // edge weight
     double    getWeight(){return pow(2, _congestion/_AvgWeight);}
@@ -75,6 +77,7 @@ public:
     void      addCongestion(int i){_congestion += i;}
     void      initCongestion(){_congestion = 0;}
     int       getTableValue(int, int); 
+    int       getNetNum() {return _route.size();}
 
     // route
     void      resetNet(){_route.clear();}
@@ -83,12 +86,11 @@ public:
 
     static float   _AvgWeight;
     static double  _kRatio;   // ratio used in LUT
+
 private:
-    //static Table _T;
     unsigned  _uid;
     float     _weight;
     int       _congestion;
-    // Table*    _T;
     FPGA*     _source;
     FPGA*     _target;
     vector<Net*> _route;
@@ -99,7 +101,7 @@ class Net
 public:
     Net(unsigned id){
         _uid = id;
-        _isDominat = false;
+        _isDominant = false;
         _weight = 0;
         _x = 1;
     }
@@ -107,12 +109,12 @@ public:
     int       getId(){ return _uid;}
     void      setSource(FPGA* f) { _source = f;}
     void      setTarget(FPGA* f) { _targets.push_back(f);}
-    void      setDominant() {_isDominat = true;}
-    void      setNonDominat() {_isDominat = false;}
-    bool      isDominant() {return _isDominat;}
+    void      setDominant() {_isDominant = true;}
+    void      setNonDominat() {_isDominant = false;}
+    bool      isDominant() {return _isDominant;}
     void      setWeight(double w);
     double    getWeight() {return _weight;}
-    void      setX(double x);
+    void      setX(double x) { _x = x;}
     double    getX() {return _x;}       
     void      showInfo();
 
@@ -130,7 +132,6 @@ public:
     void      updateMin_edge_TDM(){ Min_edge_tdm = _edge_tdm;}
     void      setedgeTDM(int i,long long int c){_edge_tdm[i] = c;}
     void      setTDM(long long int t){_TDM = t;}
-    void      incrementTDM(int i) {_TDM = _TDM + i; }
     void      calculateTDM();
     void      calculateMinTDM();
     void      clearEdgeTDM(){_edge_tdm.clear();}
@@ -150,11 +151,11 @@ public:
     vector<long long int>Min_edge_tdm;
 
 private:
-    bool      _isDominat;
-    unsigned  _uid;
-    double    _weight;
-    double    _x;
-    FPGA*     _source;
+    bool               _isDominant;
+    unsigned           _uid;
+    double             _weight;
+    double             _x;
+    FPGA*              _source;
     long long int      _TDM;
     vector<NetGroup*>  _netgroup;	
     vector<FPGA*>      _targets;
@@ -168,22 +169,22 @@ private:
 class SubNet
 {
 public:
-    SubNet(unsigned id, Net* net, FPGA* s, FPGA* t)
+    SubNet(FPGA* s, FPGA* t)
     {
-        _uid = id;
-        _net = net;
+        // _uid = id;
+        // _net = net;
         _source = s;
         _target = t;
     }
 
-    unsigned   getId() {return _uid;}
-    Net*       getNet() {return _net;}
+    // unsigned   getId() {return _uid;}
+    // Net*       getNet() {return _net;}
     FPGA*      getSource() {return _source;}
     FPGA*      getTarget() {return _target;}
 
 private:
-    unsigned  _uid;
-    Net*      _net;
+    // unsigned  _uid;
+    // Net*      _net;
     FPGA*     _source;
     FPGA*     _target;
 
@@ -207,7 +208,6 @@ public:
     Net*          getNet(int i){return _nets[i];}
 
     // TDM function
-    void          incrementTDM(int i) {_TDM = _TDM + i; }
     long long int getTDM(){return _TDM;}
     void          updateTDM();
 

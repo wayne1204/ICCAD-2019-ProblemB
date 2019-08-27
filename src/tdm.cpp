@@ -33,9 +33,11 @@ typedef __gnu_pbds::priority_queue<pDF, pdfCompare> my_pq;
 bool TDM::parseFile(const char *fname)
 {
     int nums[4];
+    clock_t start, end;
     string line, token;
     fstream fs(fname, ios::in);
 
+    start = clock();
     if (!fs.is_open())
     {
         return false;
@@ -90,6 +92,7 @@ bool TDM::parseFile(const char *fname)
     }
 
     Edge::_AvgWeight = float(nums[2]) / float(nums[1]);
+    cout << " Edge average weight:" << Edge::_AvgWeight <<endl;
 
     // groups
     _group_V.reserve(nums[3]);
@@ -142,12 +145,23 @@ bool TDM::parseFile(const char *fname)
             _distance[j][i] = distance;
         }
     }
+
     // for(int i = 0; i < _distance.size(); ++i){
     //     for(int j = 0; j < _distance.size(); ++j){
-    //         cout << _distance[i][j] << " ";
+    //         cout << (int)_distance[i][j] << " ";
     //     }
     //     cout << endl;
     // }
+
+    cout << " Isolated FPGA:";
+    for(size_t i = 0; i < _FPGA_V.size(); ++i){
+        if(_FPGA_V[i]->getEdgeNum() == 1)
+            cout << i << " ";
+    }
+    cout << endl;
+    end = clock();
+    cout << " Time used:" << ((double) (end - start)) / CLOCKS_PER_SEC << endl;
+    cout << endl;
     return true;
 }
 
@@ -161,8 +175,10 @@ void TDM::findDominantGroup(){
         avg_subnet += ((double)_group_V[i]->getSubnetNum() / _group_V.size());
     }
     int i = 0;
-    cout << _group_V[0]->getId() << " " << _group_V[0]->getSubnetNum() <<endl;
+    cout << " Dominant group #" << _group_V[0]->getId() << " subnets:" << _group_V[0]->getSubnetNum() <<endl;
     cout << " avg_net:" << avg_net << " avg_subnet:"<< avg_subnet << endl;
+    cout << endl; 
+
     while(_group_V[i]->getSubnetNum() > 3 * avg_subnet){
         _group_V[i]->setDominant();
         ++_domiantGroupCount;
@@ -171,12 +187,14 @@ void TDM::findDominantGroup(){
 
     for(size_t i = 0; i < _group_V.size(); ++i){
         double w = (double)_group_V[i]->getSubnetNum() / avg_subnet;
-        // int weight = (int)w;
         for(int j = 0; j < _group_V[i]->getNetNum(); ++j){
             _group_V[i]->getNet(j)->setWeight(w);
         }
-
     }
+    
+    // for(size_t i = 0; i < _group_V.size(); ++i){
+    //     _group_V[i]->refineWeight();
+    // }
     // if(_domiantGroupCount){
         // Edge::_kRatio = ceil(sqrt(_group_V[0]->getNetNum()/ avg_net));
         // Edge::_kRatio = sqrt(_group_V[0]->getSubnetNum()/avg_subnet);
@@ -238,16 +256,17 @@ void TDM::decomposeNet(char* fname)
     cout << " [decomposing] \n";
     for (size_t i = 0; i < _net_V.size(); ++i)
     {
-        for (size_t j = 0; j < _FPGA_V.size(); ++j)
-        {
-            _FPGA_V[j]->setVisited(false);
-        }
+        // for (size_t j = 0; j < _FPGA_V.size(); ++j)
+        // {
+        //     _FPGA_V[j]->setVisited(false);
+        // }
         _net_V[i]->decomposition();
     }
 }
 
 void TDM::showStatus(const char* fname)
 {
+    int total_edge = 0;
     cout << "=================[ Info ]================= \n";
     cout << " design name | " << fname << endl;
     cout << "    #FPGAs   | " << _FPGA_V.size() << endl;
@@ -255,10 +274,15 @@ void TDM::showStatus(const char* fname)
     cout << "    #nets    | " << _net_V.size() << endl;
     cout << " #net groups | " << _group_V.size() << endl;
     cout << "\n [NetGroup Info]\n";
-    set<pLG> sortedGroup;
+    for(size_t i = 0; i < _edge_V.size(); ++i){
+        total_edge += _edge_V[i]->getNetNum();
+    }
+    cout << "  dominant group use edges:" << total_edge << endl;
+
+
     double avg_tdm = 0.0, avg_net = 0.0, avg_subnet = 0.0;
     int cnt = 0;
-
+    set<pLG> sortedGroup;
     for(size_t i = 0; i < _group_V.size(); ++i){
         sortedGroup.insert(pLG(_group_V[i]->getTDM(), _group_V[i]));
         avg_tdm += ((double)_group_V[i]->getTDM() / (int)_group_V.size());
@@ -291,7 +315,7 @@ void TDM::showStatus(const char* fname)
         if(++cnt > 20)
             break;
     }
-    cout << "[ avg ] tdm:" << avg_tdm << " net:" << avg_net << " subnet:"<< avg_subnet << endl;
+    cout << "[ avg  ] tdm:" << avg_tdm << " net:" << avg_net << " subnet:"<< avg_subnet << endl;
     if (verbose)
     {
         for (size_t i = 0; i < _FPGA_V.size(); ++i)
@@ -331,7 +355,7 @@ void TDM::global_router(char* fname)
         {
             sub_net = max(sub_net, _net_V[i]->getNetGroup(j)->getSubnetNum());
         }
-        sorted_net.insert(pIN(sub_net, _net_V[i]));
+        sorted_net.insert(pIN(sub_net + _net_V[i]->getSubnetNum(), _net_V[i]));
         // sorted_net.insert(pIN(_net_V[i]->getSubnetNum(), _net_V[i]));
     }    
     
@@ -355,12 +379,14 @@ void TDM::global_router(char* fname)
         }
 
         //Distribute all TDM and calculate all TDM
-        ctpl::thread_pool p(8);
-        for (size_t i = 0; i < _edge_V.size(); i++){
-            //_edge_V[i]->distributeTDM();
-            p.push([](int id, Edge* e){e->distributeTDM();}, _edge_V[i]);
+        {
+            ctpl::thread_pool p(8);
+            for (size_t i = 0; i < _edge_V.size(); i++){
+                //_edge_V[i]->distributeTDM();
+                p.push([](int id, Edge* e){e->distributeTDM();}, _edge_V[i]);
+            }
+            p.stop(true);
         }
-        p.stop(true);
         for (size_t i = 0; i < _net_V.size(); i++){
             _net_V[i]->calculateTDM();
         }
@@ -441,17 +467,10 @@ void TDM::global_router(char* fname)
         //     fs2 << _group_V[i]->getTDM() << endl;
         // }
         // fs2.close();
-        iteration++;
+        if(iteration++ > 100)
+            break;
     }
-    cout << "phase1 use " << iteration << " iteration" << endl;
     cout << endl;
-    //Set Net information to Edge before phase2
-    // for (size_t i = 0; i < _edge_V.size(); i++){
-    //     _edge_V[i]->initCongestion();
-    // }
-    // for (size_t i = 0; i < _net_V.size(); i++){
-    //     _net_V[i]->setMin_routetoEdge();
-    // }
 }
 
 
@@ -499,7 +518,6 @@ struct pDFcomp {
 void TDM::Dijkstras(FPGA *source, FPGA *target, unsigned int num, stack<pFE>&route)
 {
     float maxf = numeric_limits<float>::max();
-
     my_pq Q;
     my_pq::point_iterator iter_V [num];
     vector<float> d(num, maxf); //distance
@@ -507,7 +525,7 @@ void TDM::Dijkstras(FPGA *source, FPGA *target, unsigned int num, stack<pFE>&rou
 
     d[source->getId()] = 0.0;
     parent[source->getId()] = pFE(source, NULL);
-    iter_V[source->getId()] = Q.push(pDF(d[source->getId()], source));
+    iter_V[source->getId()] = Q.push(pDF(0, source));
 
     FPGA *a = NULL;
     while (!Q.empty())
@@ -528,8 +546,8 @@ void TDM::Dijkstras(FPGA *source, FPGA *target, unsigned int num, stack<pFE>&rou
         {
             b = a->getConnectedFPGA(i);
             e = a->getEdge(i);
-            w = e->getWeight() + pow(2, _distance[a->getId()][source->getId()]);
-            // cout << e->getWeight() << " " << pow(2, _distance[a->getId()][b->getId()]) << endl;
+            w = e->getWeight() + _distance[a->getId()][source->getId()] ;
+
             if (d[a->getId()] + w < d[b->getId()])
             {
                 float distance = d[b->getId()];
@@ -557,23 +575,12 @@ void TDM::Dijkstras(FPGA *source, FPGA *target, unsigned int num, stack<pFE>&rou
 //route all nets by Dijkstras algorithm
 void TDM::local_router(bool b, set<pIN>& sorted_net)
 {
-    // cout << " ...[Dijkstra] " << endl;
-    // set<pIN> sorted_net;
-    // for (size_t i = 0; i < _net_V.size(); i++)
-    // {
-    //     long long int max_tdm = 0;
-    //     for (int j = 0; j < _net_V[i]->getGroupSize(); ++j)
-    //     {
-    //         max_tdm = max(max_tdm, _net_V[i]->getNetGroup(j)->getTDM());
-    //     }
-    //     sorted_net.insert(pIN(max_tdm, _net_V[i]));
-    // }
     // Route from the smallest/largest net group tdm value
     for (auto it = sorted_net.begin(); it != sorted_net.end(); ++it)
     // for (size_t i = 0; i < _net_V.size(); i++)
     {
         Net *n = it->second;
-        int c = n->isDominant() ? 10: 1;
+        int c = n->isDominant() ? 2: 1;
         if(n->isDominant() && !b)
             continue;
         else if(!n->isDominant() && b)
@@ -621,7 +628,7 @@ void TDM::local_router(bool b, set<pIN>& sorted_net)
             { // target is not connected
                 //route_S = Dijkstras(target, source, _FPGA_V.size());
                 stack<pFE> route_S2;
-                Dijkstras(source, target, _FPGA_V.size(), route_S2);
+                Dijkstras(target, source, _FPGA_V.size(), route_S2);
                 while (!route_S2.empty())
                 {
                     pFE p = route_S2.top();

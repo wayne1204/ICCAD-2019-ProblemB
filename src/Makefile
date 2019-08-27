@@ -1,5 +1,5 @@
 CC=g++
-CFLAGS = -Wall -pthread -fPIC -O2 -std=c++11  
+CFLAGS = -Wall -pthread -fPIC -O3 -std=c++11  
 # CFLAGS = -Wall -pthread -fPIC -g -std=c++11 
 
 EXE = cada0030

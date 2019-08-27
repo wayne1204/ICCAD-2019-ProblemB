@@ -15,6 +15,10 @@ bool netCompare(Net* a, Net* b) {
     return (a->getWeight() > b->getWeight());
 }
 
+bool netSubnetComp(Net* a, Net* b) { 
+    return (a->getSubnetNum() > b->getSubnetNum());
+}
+
 void FPGA::setConnection(Edge* e, FPGA* f){
     _connection.push_back(make_pair(f,e));
 }
@@ -31,55 +35,53 @@ void FPGA::showInfo(){
 
 void Net::calculateTDM(){
     _TDM = 0;
-    for(auto it = _edge_tdm.begin();it!=_edge_tdm.end();++it){
-        //_TDM += it->second;
-        _TDM += *it;
+    for(size_t i = 0; i < _edge_tdm.size(); ++i){
+        _TDM += _edge_tdm[i];
     }
 }
 
 void Net::calculateMinTDM(){
     _TDM = 0;
-    for(auto it = Min_edge_tdm.begin();it!=Min_edge_tdm.end();++it){
-        //_TDM += it->second;
-        _TDM += *it;
+    for(size_t i = 0; i < Min_edge_tdm.size(); ++i){
+        _TDM += Min_edge_tdm[i];
     }
 }
 
 void Net::decomposition(){
     if(_targets.size() == 1){
-        SubNet* sn = new SubNet(0, this, _source, _targets[0]);
+        SubNet* sn = new SubNet(_source, _targets[0]);
         _subnets.push_back(sn);
         return;
     }
     // construct MST
-    queue<FPGA*> Q;
-    Q.push(_source);
-    _source->setVisited(true);
-    while(!Q.empty()){
-        FPGA* f = Q.front();
-        Q.pop();
-        for(int i = 0; i < f->getEdgeNum(); ++i){
-            if(!f->getConnectedFPGA(i)->isVisited()){
-                Q.push(f->getConnectedFPGA(i));
-                f->getConnectedFPGA(i)->setParent(f);
-                f->getConnectedFPGA(i)->setVisited(true);
-            }
-        }
-    }
+    // queue<FPGA*> Q;
+    // Q.push(_source);
+    // _source->setVisited(true);
+    // while(!Q.empty()){
+    //     FPGA* f = Q.front();
+    //     Q.pop();
+    //     for(int i = 0; i < f->getEdgeNum(); ++i){
+    //         if(!f->getConnectedFPGA(i)->isVisited()){
+    //             Q.push(f->getConnectedFPGA(i));
+    //             f->getConnectedFPGA(i)->setParent(f);
+    //             f->getConnectedFPGA(i)->setVisited(true);
+    //         }
+    //     }
+    // }
 
-    int count = 0;
-    set<FPGA*> mst_set;
-    mst_set.insert(_source);
+    // set<FPGA*> mst_set;
+    // mst_set.insert(_source);
     for(size_t i = 0; i < _targets.size(); ++i){
-        FPGA* f = _targets[i];
-        while(f->getParent() != NULL){
-            if(mst_set.find(f->getParent()) != mst_set.end())
-                break;
-            f = f->getParent();
-        }
-        mst_set.insert(_targets[i]);
-        SubNet* sb = new SubNet(count++, this, f->getParent(), _targets[i]);
-        // cout << f->getParent()->getId() << " " << f->getId() <<endl;
+        // FPGA* f = _targets[i];
+        // while(f->getParent() != NULL){
+        //     if(mst_set.find(f->getParent()) != mst_set.end())
+        //         break;
+        //     f = f->getParent();
+        // }
+        // mst_set.insert(_targets[i]);
+        // SubNet* sb = new SubNet(count++, this, f->getParent(), _targets[i]);
+        // cout << f->getParent()->getId() << " " << _targets[i]->getId() <<endl;
+        SubNet* sb = new SubNet(_source, _targets[i]);
         _subnets.push_back(sb);
     }
 }
@@ -87,10 +89,6 @@ void Net::decomposition(){
 void Net::setWeight(double w){
     if(w > _weight)
         _weight = w ;
-}
-
-void Net::setX(double x){
-    _x = x;
 }
 
 
@@ -104,7 +102,6 @@ void Net::showInfo(){
     cout << endl;
 }
 
-
 void Edge::updateWeight(int iteration){
     _weight = (_weight * iteration + pow(2,(float)_congestion/_AvgWeight))/(iteration+1);
     if(_weight <1)_weight  = 1;
@@ -114,15 +111,15 @@ void Edge::updateWeight(int iteration){
 void Edge::distributeTDM(){
 
     // sort(_route.begin(), _route.end(), netCompare);
-    double total_sum = 0, sum = 0;
+    double total_sum = 0;
     for(size_t i = 0; i < _route.size() ; ++i){
-        if(!_route[i]->isDominant()){
-            sum += _route[i]->getWeight() * _route[i]->getX();
-        }
+        // if(!_route[i]->isDominant()){
+        //     sum += _route[i]->getWeight() * _route[i]->getX();
+        // }
         total_sum += _route[i]->getWeight() * _route[i]->getX();
     }  
 
-    double total_TDM = 1;
+    // double total_TDM = 1;
     size_t i;
     for(i = 0; i < _route.size() ; ++i){
         // if(_route[i]->isDominant()){
@@ -130,7 +127,7 @@ void Edge::distributeTDM(){
             new_tdm = (new_tdm % 2 == 0) ? new_tdm : new_tdm + 1;
             assert(new_tdm > 0);
             _route[i]->setedgeTDM(_uid, new_tdm);
-            total_TDM -= 1.0/(double)new_tdm;
+            // total_TDM -= 1.0/(double)new_tdm;
         // }
         // else break;
     }
@@ -140,22 +137,6 @@ void Edge::distributeTDM(){
     //     assert(new_tdm > 0);
     //     _route[i]->setedgeTDM(_uid, new_tdm);
     // }
-        // exist dominant group
-        // if(dominantCnt){
-        //     if(nn->isDominant()){
-        //         new_tdm = ceil(_kRatio / (_kRatio - 1) * dominantCnt);
-        //     }else{
-        //         new_tdm = ceil(_kRatio * getTableValue(_congestion - dominantCnt, rank++));
-        //     }
-        //     new_tdm = (new_tdm % 2 == 0) ? new_tdm : new_tdm + 1;
-        // }
-        // // no dominant group
-        // else{
-        //    new_tdm = getTableValue(_congestion, rank++);
-        // }
-    // }
-
-    //TODO update net groupTDM
 }
 
 int Edge::getTableValue(int congestion, int rank){

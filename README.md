@@ -3,7 +3,12 @@
 - [Contest Link](http://iccad-contest.org/2019/problems.html)
 - language: C++
 - compiler: -std=c++11
+
+### Team Info
 - team: cada0030
+- serial number: 5eb07cd6
+- IP address: 140.114.214.87
+- directory: /project/cad/cad07/final_test/cada0030
 
 ### Structure
 - **src/** : source code directory
