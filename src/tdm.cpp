@@ -280,19 +280,120 @@ bool TDM::outputFile(const char *fname)
     //     fs2 << _group_V[i]->getTDM() << endl;
     // }
     // fs2.close();
+
     return true;
 }
 
 void TDM::decomposeNet()
 {
     cout << " [decomposing] \n";
+    int maxInt = numeric_limits<int>::max();
+    vector<FPGA*>parent(_FPGA_V.size(),NULL);
+    vector<bool>visited(_FPGA_V.size(),false);
+    vector<int>key(_FPGA_V.size(),maxInt);
     for (size_t i = 0; i < _net_V.size(); ++i)
     {
         // for (size_t j = 0; j < _FPGA_V.size(); ++j)
         // {
         //     _FPGA_V[j]->setVisited(false);
         // }
-        _net_V[i]->decomposition();
+        //_net_V[i]->decomposition();
+        Net* n = _net_V[i];
+        //cout<<"decompose Net"<<n->getId()<<endl;
+        int target_num = n->getTargetNum();
+        if(target_num == 1){
+            SubNet* sn = new SubNet(n->getSource(), n->getTarget(0));
+            n->setSubNet(sn);
+            continue;
+        }
+        //construct MST
+        parent.clear();
+        visited.clear();
+        key.clear();
+        parent.resize(_FPGA_V.size(),NULL);
+        visited.resize(_FPGA_V.size(),false);
+        key.resize(_FPGA_V.size(),maxInt);
+
+        FPGA* source = n->getSource();
+        /*if(n->getId()==11){
+            cout<<"source:"<<source->getId()<<endl;
+            cout<<"Target :";
+            for(int k= 0;k<target_num; k++){
+                cout<<n->getTarget(k)->getId()<<" ";
+            }
+            cout<<endl;
+        }*/
+        key[source->getId()] = 0;
+        parent[source->getId()] = source;
+        visited[source->getId()] = true;
+        FPGA* targetFPGA = NULL;
+        int id = -1;
+        for(int k = 0; k < target_num; ++k){
+            targetFPGA = n->getTarget(k);
+            id = targetFPGA->getId();
+            //cout<<"dis : "<<(int)_distance[source->getId()][id]<<"  vis :"<<visited[id]<<" key : "<<key[id]<<endl;
+            if(visited[id]==false && _distance[source->getId()][id]<key[id]){
+                parent[id] = source;
+                key[id] =   _distance[source->getId()][id];
+            }
+        }
+        for(int k = 0; k < target_num; ++k){
+            int min = maxInt;
+            int minidx = -1;
+            FPGA* t;
+            for(int j = 0; j < target_num; ++j){
+                t = n->getTarget(j);
+                if( visited[t->getId()] == false && key[t->getId()] < min){
+                    min = key[t->getId()];
+                    minidx = t->getId();
+                }
+            }
+            FPGA* minFPGA = _FPGA_V[minidx];
+            int u = minFPGA->getId();
+            visited[u] = true;
+           // SubNet* sn = new SubNet(parent[u], minFPGA);
+            //n->setSubNet(sn);
+            //if(n->getId()==11)cout<<"subNet :"<<parent[u]->getId()<<" "<<minFPGA->getId()<<endl;
+            for(int j = 0; j < target_num; ++j){
+                targetFPGA = n->getTarget(j);
+                if(targetFPGA == minFPGA)continue;
+                id = targetFPGA->getId();
+                if(visited[id]==false && _distance[u][id]<key[id]){
+                    parent[id] = minFPGA;
+                    key[id] =   _distance[u][id];
+                }
+            }
+        }
+        vector< vector<FPGA*> >twopin;
+        for(size_t i = 0; i < _FPGA_V.size(); ++i){
+            vector<FPGA*> s;
+            twopin.push_back(s);
+        }
+        for(int k = 0; k < target_num; ++k){
+            //assert(parent[n->getTarget(i)->getId()] !=NULL);
+            twopin[ parent[n->getTarget(k)->getId()]->getId() ].push_back(n->getTarget(k));
+            //SubNet* sn = new SubNet(parent[n->getTarget(k)->getId()], n->getTarget(k));
+            //n->setSubNet(sn);
+            //cout<<"subNet :"<<parent[n->getTarget(k)->getId()]->getId()<<" "<<n->getTarget(k)->getId()<<endl;
+        }
+        stack<int> popstack;
+        FPGA* popFPGA;
+        int popidx = source->getId();
+        popstack.push(popidx);
+        while(!popstack.empty()){
+            popidx = popstack.top();
+            popstack.pop();
+            for(size_t j = 0; j < twopin[popidx].size(); ++j){
+                popFPGA = twopin[popidx][j];
+                SubNet* sn = new SubNet(_FPGA_V[popidx],popFPGA);
+                n->setSubNet(sn);
+                //cout<<"SubNet "<<popidx<<" "<<popFPGA->getId()<<endl;
+                popstack.push(popFPGA->getId());
+            }
+            
+        }
+        
+        
     }
 }
 
@@ -408,12 +509,12 @@ void TDM::global_router(char* fname)
             local_router(true, sorted_net);
             local_router(false, sorted_net);
         }
-        else if(iteration < 5){
+        /*else if(iteration < 5){
             //for (size_t i = 0; i < _edge_V.size(); i++){
              //   _edge_V[i]->initCongestion();
             //}
             ripup_reroute(sorted_net);
-        }
+        }*/
 
         for (size_t i = 0; i < _net_V.size(); i++) {
             // _net_V[i]->clearEdgeTDM();
@@ -579,11 +680,13 @@ void TDM::Dijkstras(FPGA *source, FPGA *target, unsigned int num, Net* n)
         Q.pop();
         
         a = top.second;
-        if (a == target)
+        if (a == target){
             break; //Find the target
-        else if (_pathcheck_V[a->getId()])
+        }
+        else if (_pathcheck_V[a->getId()]){
+            //cout<<"use steiner point "<<a->getId()<<endl;
             break; // Find the steiner point
-
+        }
         double w;
         FPGA *b;
         Edge *e;
@@ -620,6 +723,7 @@ void TDM::Dijkstras(FPGA *source, FPGA *target, unsigned int num, Net* n)
             n->addEdgetoCur_route(connectEdge);
             connectEdge->addNet(n);
         // }
+        //cout<<"FPGA :"<<a->getId()<<"  "<<connectFPGA->getId()<<" use Edge"<<connectEdge->getId()<<endl;
         a = parent[a->getId()].first;
     }
     // cout << ++times << endl;
@@ -732,6 +836,7 @@ void TDM::local_router(bool b, set<pIN>& sorted_net)
                 continue;
             else if (_pathcheck_V[source->getId()] && !_pathcheck_V[target->getId()])
             { // We can swap source and target in order to efficiently find steiner point
+                //cout<<"swap S T"<<endl;
                 FPGA *temp = source;
                 source = target;
                 target = temp;
@@ -761,7 +866,7 @@ void TDM::local_router(bool b, set<pIN>& sorted_net)
             { // target is not connected
                 //route_S = Dijkstras(target, source, _FPGA_V.size());
                 // stack<pFE> route_S2;
-                // cout << "target is not connectted\n";
+                //cout << "target is not connectted\n";
                 Dijkstras(target, source, _FPGA_V.size(), n);
                 // while (!route_S2.empty())
                 // {

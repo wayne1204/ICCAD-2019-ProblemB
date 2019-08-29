@@ -54,35 +54,35 @@ void Net::decomposition(){
         _subnets.push_back(sn);
         return;
     }
-    // construct MST
-    // queue<FPGA*> Q;
-    // Q.push(_source);
-    // _source->setVisited(true);
-    // while(!Q.empty()){
-    //     FPGA* f = Q.front();
-    //     Q.pop();
-    //     for(int i = 0; i < f->getEdgeNum(); ++i){
-    //         if(!f->getConnectedFPGA(i)->isVisited()){
-    //             Q.push(f->getConnectedFPGA(i));
-    //             f->getConnectedFPGA(i)->setParent(f);
-    //             f->getConnectedFPGA(i)->setVisited(true);
-    //         }
-    //     }
-    // }
+    //construct MST
+     /*queue<FPGA*> Q;
+     Q.push(_source);
+     _source->setVisited(true);
+     while(!Q.empty()){
+         FPGA* f = Q.front();
+         Q.pop();
+         for(int i = 0; i < f->getEdgeNum(); ++i){
+             if(!f->getConnectedFPGA(i)->isVisited()){
+                 Q.push(f->getConnectedFPGA(i));
+                 f->getConnectedFPGA(i)->setParent(f);
+                 f->getConnectedFPGA(i)->setVisited(true);
+             }
+         }
+     }
 
-    // set<FPGA*> mst_set;
-    // mst_set.insert(_source);
+     set<FPGA*> mst_set;
+     mst_set.insert(_source);*/
     for(size_t i = 0; i < _targets.size(); ++i){
-        // FPGA* f = _targets[i];
-        // while(f->getParent() != NULL){
-        //     if(mst_set.find(f->getParent()) != mst_set.end())
-        //         break;
-        //     f = f->getParent();
-        // }
-        // mst_set.insert(_targets[i]);
-        // SubNet* sb = new SubNet(count++, this, f->getParent(), _targets[i]);
-        // cout << f->getParent()->getId() << " " << _targets[i]->getId() <<endl;
-        SubNet* sb = new SubNet(_source, _targets[i]);
+         /*FPGA* f = _targets[i];
+         while(f->getParent() != NULL){
+             if(mst_set.find(f->getParent()) != mst_set.end())
+                 break;
+             f = f->getParent();
+         }
+         mst_set.insert(_targets[i]);
+         SubNet* sb = new SubNet( f->getParent(), _targets[i]);
+         cout << f->getParent()->getId() << " " << _targets[i]->getId() <<endl;*/
+        SubNet* sb = new SubNet( _targets[i], _source);
         _subnets.push_back(sb);
     }
 }

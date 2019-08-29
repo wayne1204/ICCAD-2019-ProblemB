@@ -50,6 +50,8 @@ public:
     bool       isVisited() {return _visit == _globalVisit; }
     void       setParent(FPGA* p) {_parent = p;}
     FPGA*      getParent() {return _parent;}
+    //void       setisTarget(bool b){_isTarget = b;}
+    //bool       isTaegrt(){return _isTarget;}
 
 
 private:
@@ -59,6 +61,7 @@ private:
     int          _usage;
     FPGA*        _parent;
     vector<pFE>  _connection;
+    //bool         _isTarget;
 };
 
 // FPGA connections
@@ -78,7 +81,8 @@ public:
     FPGA*     getTarget() {return _target;}
 
     // edge weight
-    double    getWeight(){return pow(2, _congestion / _capacity);}
+    //double    getWeight(){return pow(2, _congestion / _capacity);}
+    double    getWeight(){return pow(2, _congestion / _AvgWeight);}
     void      updateWeight(int iteration);
     void      addCongestion(int i){_congestion += i;}
     void      initCongestion(){_congestion = 0;}
@@ -129,6 +133,7 @@ public:
     FPGA*     getSource() {return _source;}
     FPGA*     getTarget(int i) {return _targets[i];}
     void      showInfo();
+    int       getTargetNum(){return _targets.size();}
 
     // route info
     void      addEdgetoCur_route(Edge* e){ _cur_route.push_back(e);}
@@ -156,6 +161,7 @@ public:
     void      decomposition();
     int       getSubnetNum() { return _subnets.size(); }
     SubNet*   getSubNet(unsigned i) { return _subnets[i]; }
+    void      setSubNet(SubNet* sn){_subnets.push_back(sn);}
 
     // group info
     void      addGroup(NetGroup* g) {_netgroup.push_back(g); }
