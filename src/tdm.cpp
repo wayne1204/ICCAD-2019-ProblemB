@@ -84,10 +84,12 @@ bool TDM::parseFile(const char *fname)
         Net *n = new Net(i);
         size_t begin = getToken(0, line, token);
         n->setSource(_FPGA_V[stoi(token)]);
+        _FPGA_V[stoi(token)]->addUsage();
         while (begin != string::npos)
         {
             begin = getToken(begin, line, token);
             n->setTarget(_FPGA_V[stoi(token)]);
+            _FPGA_V[stoi(token)]->addUsage();
         }
         n->initEdgeTDM(nums[1]);
         _net_V.push_back(n);
@@ -169,6 +171,29 @@ bool TDM::parseFile(const char *fname)
 }
 
 
+void TDM::preRoute(){
+    cout << " [pre-routing] \n";
+    // dominat group only
+    // for(int i = 0; i <_group_V[0]->getNetNum(); ++i){
+    //     Net* n = _group_V[0]->getNet(i);
+    //     n->getSource()->addUsage();
+    //     for(int j = 0; j < n->getSubnetNum(); ++j){
+    //         n->getTarget(j)->addUsage();
+    //     }   
+    // }
+    for(size_t i = 0; i < _FPGA_V.size(); ++i){
+        double cap = 0.5*(double)_FPGA_V[i]->getUsage() / _FPGA_V[i]->getEdgeNum();
+        for(int j = 0; j < _FPGA_V[i]->getEdgeNum(); ++j){
+            _FPGA_V[i]->getEdge(j)->addCapacity(cap);
+        }
+    }
+
+    // for(int i = 0; i < _edge_V.size(); ++i){
+    //     cout << i << " " << _edge_V[i]->getCapacity() << endl;
+    // }
+}
+
+
 // find domimant group
 void TDM::findDominantGroup(){
     sort(_group_V.begin(), _group_V.end(), groupCompare);
@@ -177,14 +202,15 @@ void TDM::findDominantGroup(){
         _avg_subnet += ((double)_group_V[i]->getSubnetNum() / _group_V.size());
     }
     int i = 0;
-    cout << " Dominant group #" << _group_V[0]->getId() << " subnets:" << _group_V[0]->getSubnetNum() <<endl;
-    cout << " avg_net:" << _avg_net << " avg_subnet:"<< _avg_subnet << endl;
-    cout << endl;
 
-    while(_group_V[i]->getNetNum() > 3 * _avg_subnet){
+    while(_group_V[i]->getSubnetNum() > 3 * _avg_subnet){
         _group_V[i]->setDominant();
         ++_domiantGroupCount;
         ++i;
+    }
+  
+    for(size_t i = 0; i < _net_V.size(); ++i){
+        _total_subnet += _net_V[i]->getSubnetNum();
     }
     for(size_t i = 0; i < _group_V.size(); ++i){
         double w = (double)_group_V[i]->getSubnetNum() / _avg_subnet;
@@ -192,7 +218,12 @@ void TDM::findDominantGroup(){
             _group_V[i]->getNet(j)->setWeight(w);
         }
     }
-    
+
+    cout << " Dominant group #" << _group_V[0]->getId() << " subnets:" << _group_V[0]->getSubnetNum() <<endl;
+    cout << " avg_net:" << _avg_net << " avg_subnet:"<< _avg_subnet 
+         << " total subnet:" << _total_subnet << endl;
+    cout << " Dominant Group #" << i << endl;
+    cout << endl;
     // for(size_t i = 0; i < _group_V.size(); ++i){
     //     _group_V[i]->refineWeight();
     // }
@@ -252,7 +283,7 @@ bool TDM::outputFile(const char *fname)
     return true;
 }
 
-void TDM::decomposeNet(char* fname)
+void TDM::decomposeNet()
 {
     cout << " [decomposing] \n";
     for (size_t i = 0; i < _net_V.size(); ++i)
@@ -530,11 +561,11 @@ struct pDFcomp {
 //single source single target shortest path algortihm
 void TDM::Dijkstras(FPGA *source, FPGA *target, unsigned int num, Net* n)
 {
-    float maxf = numeric_limits<float>::max();
+    double maxf = numeric_limits<double>::max();
     int c = n->isDominant() ? 2: 1;
     my_pq Q;
     my_pq::point_iterator iter_V [num];
-    vector<float> d(num, maxf); //distance
+    vector<double> d(num, maxf); //distance
     vector<pFE> parent(num);    //Record the parentId and edge of each FPGA after Dijkstras
 
     d[source->getId()] = 0.0;
@@ -553,7 +584,7 @@ void TDM::Dijkstras(FPGA *source, FPGA *target, unsigned int num, Net* n)
         else if (_pathcheck_V[a->getId()])
             break; // Find the steiner point
 
-        float w;
+        double w;
         FPGA *b;
         Edge *e;
         for (int i = 0; i < a->getEdgeNum(); i++)
@@ -564,7 +595,7 @@ void TDM::Dijkstras(FPGA *source, FPGA *target, unsigned int num, Net* n)
 
             if (d[a->getId()] + w < d[b->getId()])
             {
-                float distance = d[b->getId()];
+                double distance = d[b->getId()];
                 d[b->getId()] = d[a->getId()] + w;
                 parent[b->getId()] = pFE(a, e);
 
@@ -730,7 +761,7 @@ void TDM::local_router(bool b, set<pIN>& sorted_net)
             { // target is not connected
                 //route_S = Dijkstras(target, source, _FPGA_V.size());
                 // stack<pFE> route_S2;
-                cout << "target is not connectted\n";
+                // cout << "target is not connectted\n";
                 Dijkstras(target, source, _FPGA_V.size(), n);
                 // while (!route_S2.empty())
                 // {

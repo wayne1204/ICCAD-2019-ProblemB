@@ -15,13 +15,15 @@ class TDM
         _domiantGroupCount = 0;
         _avg_net = 0;
         _avg_subnet = 0;
+        _total_subnet = 0;
     }
     bool parseFile(const char* fname);
+    void preRoute();
     void findDominantGroup();
+    void decomposeNet();
     bool outputFile(const char* fname);
     void showStatus(const char* fname);
     void updatekRatio();  
-    void decomposeNet(char* fname);
     void global_router(char* fname);
     void ripup_reroute(set<pIN>&);
 
@@ -34,6 +36,7 @@ class TDM
     int               _domiantGroupCount;  // number of dominat count
     double            _avg_net;
     double            _avg_subnet;
+    int               _total_subnet;
     vector<bool>      _pathcheck_V; // for each net to check whether the FPGA is connected or not, then we can stop Dijkstras
     vector<FPGA*>     _FPGA_V;
     vector<Edge*>     _edge_V;

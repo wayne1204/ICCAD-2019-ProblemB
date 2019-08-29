@@ -10,7 +10,7 @@
 #include "math.h"
 
 #define pIF pair<int, FPGA*>
-#define pDF pair<float, FPGA*>
+#define pDF pair<double, FPGA*>
 #define pFE pair<FPGA*, Edge*>
 #define pIN pair<int, Net*>
 #define pIG pair<int, NetGroup*>
@@ -31,12 +31,15 @@ public:
     FPGA(unsigned id){
         _uid = id;
         _visit = 0;
+        _usage = 0;
         _parent = NULL;
     }
     // basic info
     unsigned   getId() {return _uid;}
     void       setConnection(Edge* e, FPGA* f);
     int        getEdgeNum() {return _connection.size(); }
+    void       addUsage() {++_usage;}
+    int        getUsage() {return _usage;}
     Edge*      getEdge(unsigned i) {return _connection[i].second; }
     FPGA*      getConnectedFPGA(unsigned i) {return _connection[i].first; }
     void       showInfo();
@@ -53,6 +56,7 @@ private:
     static  unsigned _globalVisit;
     unsigned     _visit;
     unsigned     _uid;
+    int          _usage;
     FPGA*        _parent;
     vector<pFE>  _connection;
 };
@@ -65,7 +69,7 @@ public:
         _uid = id;
         _weight = 1.0;
         _congestion = 0;
-        // _T = t;
+        _capacity = 0;
     }
     // basic info
     void      setVertex(FPGA* f1, FPGA* f2) {_source = f1; _target = f2;}
@@ -74,10 +78,12 @@ public:
     FPGA*     getTarget() {return _target;}
 
     // edge weight
-    double    getWeight(){return pow(2, _congestion/_AvgWeight);}
+    double    getWeight(){return pow(2, _congestion / _capacity);}
     void      updateWeight(int iteration);
     void      addCongestion(int i){_congestion += i;}
     void      initCongestion(){_congestion = 0;}
+    void      addCapacity(double i) {_capacity += i;}
+    double    getCapacity() {return _capacity;}
     int       getTableValue(int, int); 
     int       getNetNum() {return _route.size();}
 
@@ -94,6 +100,7 @@ private:
     unsigned  _uid;
     float     _weight;
     int       _congestion;
+    double    _capacity;
     FPGA*     _source;
     FPGA*     _target;
     vector<Net*> _route;
@@ -119,6 +126,8 @@ public:
     double    getWeight() {return _weight;}
     void      setX(double x) { _x = x;}
     double    getX() {return _x;}       
+    FPGA*     getSource() {return _source;}
+    FPGA*     getTarget(int i) {return _targets[i];}
     void      showInfo();
 
     // route info
