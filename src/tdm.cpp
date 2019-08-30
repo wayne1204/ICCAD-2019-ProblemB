@@ -33,6 +33,7 @@ typedef __gnu_pbds::priority_queue<pDF, pdfCompare> my_pq;
 bool TDM::parseFile(const char *fname)
 {
     int nums[4];
+    int value;
     clock_t start, end;
     string line, token;
     fstream fs(fname, ios::in);
@@ -43,10 +44,8 @@ bool TDM::parseFile(const char *fname)
         return false;
     }
     cout << "\n [parsing] \n";
-    for (int i = 0; i < 4; ++i)
-    {
-        fs >> token;
-        nums[i] = stoi(token);
+    for (int i = 0; i < 4; ++i){
+        fs >> nums[i];
     }
     getline(fs, line);
 
@@ -62,13 +61,14 @@ bool TDM::parseFile(const char *fname)
     _edge_V.reserve(nums[1]);
     for (int i = 0; i < nums[1]; ++i)
     {
-        size_t begin = 0;
+        // size_t begin = 0;
         unsigned f1, f2;
+        fs >> f1 >> f2 ;
         getline(fs, line);
-        begin = getToken(0, line, token);
-        f1 = stoi(token);
-        begin = getToken(begin, line, token);
-        f2 = stoi(token);
+        // begin = getToken(0, line, token);
+        // f1 = stoi(token);
+        // begin = getToken(begin, line, token);
+        // f2 = stoi(token);
         Edge *e = new Edge(i);
         e->setVertex(_FPGA_V[f1], _FPGA_V[f2]);
         _edge_V.push_back(e);
@@ -81,15 +81,16 @@ bool TDM::parseFile(const char *fname)
     for (int i = 0; i < nums[2]; ++i)
     {
         getline(fs, line);
-        Net *n = new Net(i);
+        Net *n = new Net();
         size_t begin = getToken(0, line, token);
         n->setSource(_FPGA_V[stoi(token)]);
         _FPGA_V[stoi(token)]->addUsage();
         while (begin != string::npos)
         {
             begin = getToken(begin, line, token);
-            n->setTarget(_FPGA_V[stoi(token)]);
-            _FPGA_V[stoi(token)]->addUsage();
+            value = atoi(token.c_str());
+            n->setTarget(_FPGA_V[value]);
+            _FPGA_V[value]->addUsage();
         }
         n->initEdgeTDM(nums[1]);
         _net_V.push_back(n);
@@ -103,13 +104,14 @@ bool TDM::parseFile(const char *fname)
     for (int i = 0; i < nums[3]; ++i)
     {
         getline(fs, line);
-        NetGroup *g = new NetGroup(i);
+        NetGroup *g = new NetGroup();
         size_t begin = 0;
         while (begin != string::npos)
         {
             begin = getToken(begin, line, token);
-            g->addNet(_net_V[stoi(token)]);
-            _net_V[stoi(token)]->addGroup(g);
+            value = atoi(token.c_str());
+            g->addNet(_net_V[value]);
+            _net_V[value]->addGroup(g);
         }
         _group_V.push_back(g);
     }
@@ -172,7 +174,7 @@ bool TDM::parseFile(const char *fname)
 
 
 void TDM::preRoute(){
-    cout << " [pre-routing] \n";
+    cout << " [pre-routing] " << endl;
     // dominat group only
     // for(int i = 0; i <_group_V[0]->getNetNum(); ++i){
     //     Net* n = _group_V[0]->getNet(i);
@@ -221,32 +223,10 @@ void TDM::findDominantGroup(){
         }
     }
 
-    cout << " Dominant group #" << _group_V[0]->getId() << " subnets:" << _group_V[0]->getSubnetNum() <<endl;
+    cout << " Dominant group subnets:" << _group_V[0]->getSubnetNum() <<endl;
     cout << " avg_net:" << _avg_net << " avg_subnet:"<< _avg_subnet 
          << " total subnet:" << _total_subnet << endl;
-    cout << " Dominant Group #" << i << endl;
     cout << endl;
-    // for(size_t i = 0; i < _group_V.size(); ++i){
-    //     _group_V[i]->refineWeight();
-    // }
-    // if(_domiantGroupCount){
-        // Edge::_kRatio = ceil(sqrt(_group_V[0]->getNetNum()/ avg_net));
-        // Edge::_kRatio = sqrt(_group_V[0]->getSubnetNum()/avg_subnet);
-    // }
-    // else{
-    //     Edge::_kRatio = _group_V[i]->getNetNum() / avg_net;
-    //     for(int i = 0; i < 1; ++i){
-    //         _group_V[i]->setDominant();
-    //         ++_domiantGroupCount;;
-    //     }
-    // }
-
-    // int cnt = 0;
-    // for(size_t i = 0; i < _net_V.size(); ++i){
-    //     if(_net_V[i]->isDominant())
-    //         cnt++;
-    // }
-    // cout << " ...dominant net: " << cnt << "/" << _net_V.size() << endl;
 }
 
 
@@ -277,12 +257,6 @@ bool TDM::outputFile(const char *fname)
         }
     }
     fs.close();
-    // fstream fs2(string(fname)+".out", ios::out);
-    // for(size_t i = 0; i < _group_V.size(); ++i){
-    //     fs2 << _group_V[i]->getTDM() << endl;
-    // }
-    // fs2.close();
-
     return true;
 }
 
@@ -432,9 +406,8 @@ void TDM::showStatus(const char* fname)
             edgeNum += it->second->getNet(i)->getMin_routeNum();
         }
         double ratio = (double)it->second->getTDM() / edgeNum;
-        printf("[%6d] tdm:%lld net/subnet: %d/%d ratio:%f \n", it->second->getId(),
-               it->second->getTDM(), it->second->getNetNum(), it->second->getSubnetNum(),
-               ratio);
+        printf(" tdm:%lld net/subnet: %d/%d ratio:%f \n", it->second->getTDM(), 
+                it->second->getNetNum(), it->second->getSubnetNum(), ratio);
         if(++cnt > 20)
             break;
     }
@@ -446,9 +419,8 @@ void TDM::showStatus(const char* fname)
             edgeNum += it->second->getNet(i)->getMin_routeNum();
         }
         double ratio = (double)it->second->getTDM() / edgeNum;
-        printf("[%6d] tdm:%lld net/subnet: %d/%d ratio:%f \n", it->second->getId(),
-               it->second->getTDM(), it->second->getNetNum(), it->second->getSubnetNum()
-               , ratio);
+        printf(" tdm:%lld net/subnet: %d/%d ratio:%f \n", it->second->getTDM(), 
+        it->second->getNetNum(), it->second->getSubnetNum(), ratio);
         if(++cnt > 20)
             break;
     }
@@ -471,7 +443,7 @@ void TDM::showStatus(const char* fname)
 void TDM::global_router(char* fname)
 {
     //phase1
-    cout << " [routing] \n";
+    cout << " [routing] " <<endl;
     long long int minimumTDM = numeric_limits<long long int>::max();
     int iteration = 0, terminateCount = 0, section = 1;
 
@@ -585,41 +557,11 @@ void TDM::global_router(char* fname)
         double t =  ((double) (end - start)) / CLOCKS_PER_SEC;
         printf(" #%d section:%d  current: %lld (id:%d)| min: %lld time:%.3f \n", 
         iteration, section, maxGroupTDM, group_id, minimumTDM, t);
-        //Update edge's weight for next iteration
-        // for (size_t i = 0; i < _edge_V.size(); i++) {
-        //     _edge_V[i]->updateWeight(iteration);
-        // }
-        // char ss [20];
-        // sprintf(ss, "log/s%c_%d", fname[8], iteration);
-        // fstream fs2(ss, ios::out);
-        // for(size_t i = 0; i < _group_V.size(); ++i){
-        //     fs2 << _group_V[i]->getTDM() << endl;
-        // }
-        // fs2.close();
         if(iteration++ > 100)
             break;
     }
     cout << endl;
 }
-
-
-// update k-ratio by group edge ratio
-void TDM::updatekRatio(){
-    int maxGroupEdge = 0;
-    double avgGroupEdge = 0.0; 
-
-    for(size_t i = 0; i < _group_V.size(); ++i){
-        int groupEdge = 0;
-        for(int j = 0; j < _group_V[i]->getNetNum(); ++j){
-            groupEdge += _group_V[i]->getNet(j)->getCur_routeNum();
-        }
-        maxGroupEdge = max(maxGroupEdge, groupEdge);
-        avgGroupEdge += (double)groupEdge / _group_V.size();
-    }
-    Edge::_kRatio = ceil(sqrt(maxGroupEdge / avgGroupEdge));
-    cout << maxGroupEdge << " " << avgGroupEdge << " " << Edge::_kRatio <<endl;
-}
-
 
 // cut a string from space
 size_t TDM::getToken(size_t pos, string &s, string &token)

@@ -70,7 +70,6 @@ class Edge
 public:
     Edge(unsigned id){
         _uid = id;
-        _weight = 1.0;
         _congestion = 0;
         _capacity = 0;
     }
@@ -82,7 +81,6 @@ public:
 
     // edge weight
     double    getWeight(){return pow(2, _congestion / _AvgWeight);}
-    void      updateWeight(int iteration);
     void      addCongestion(int i){_congestion += i;}
     void      initCongestion(){_congestion = 0;}
     void      addCapacity(double i) {_capacity += i;}
@@ -100,26 +98,25 @@ public:
     static double  _kRatio;   // ratio used in LUT
 
 private:
-    unsigned  _uid;
-    float     _weight;
-    int       _congestion;
-    double    _capacity;
-    FPGA*     _source;
-    FPGA*     _target;
+    unsigned     _uid;
+    int          _congestion;
+    double       _capacity;
+    FPGA*        _source;
+    FPGA*        _target;
     vector<Net*> _route;
 };
 
 class Net
 {
 public:
-    Net(unsigned id){
-        _uid = id;
+    Net(){
+        // _uid = id;
         _isDominant = false;
         _weight = 0;
         _x = 1;
     }
     // basic info
-    int       getId(){ return _uid;}
+    // int       getId(){ return _uid;}
     void      setSource(FPGA* f) { _source = f;}
     void      setTarget(FPGA* f) { _targets.push_back(f);}
     void      setDominant() {_isDominant = true;}
@@ -150,7 +147,6 @@ public:
     void      setTDM(long long int t){_TDM = t;}
     void      calculateTDM();
     void      calculateMinTDM();
-    // void      clearEdgeTDM(){_edge_tdm.clear();}
     void      initEdgeTDM(int size);
     void      clearEdgeTDM();
     //void    updateMin_TDM(){_min_TDM = _TDM;}
@@ -170,8 +166,8 @@ public:
     vector<long long int>Min_edge_tdm;
 
 private:
+    // unsigned           _uid;
     bool               _isDominant;
-    unsigned           _uid;
     double             _weight;
     double             _x;
     static double      _avg_group_tdm;
@@ -215,13 +211,13 @@ private:
 class NetGroup
 {
 public:
-    NetGroup (unsigned id){
-        _uid = id;
+    NetGroup (){
+        // _uid = id;
         _TDM = 0;
         _isDominant = false;
     }
     // basic info
-    unsigned      getId() {return  _uid;}
+    // unsigned      getId() {return  _uid;}
     void          setDominant(); 
     bool          isDominant() {return _isDominant; }
     void          addNet(Net* n) {_nets.push_back(n);}
@@ -234,8 +230,8 @@ public:
     void          updateTDM();
 
 private:
+    // unsigned       _uid;
     bool           _isDominant;  // is dominat group
-    unsigned       _uid;
     long long int  _TDM;
     vector<Net*>   _nets;
 };

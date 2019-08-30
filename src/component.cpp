@@ -102,19 +102,13 @@ void Net::clearEdgeTDM(){
 }
 
 void Net::showInfo(){
-    cout << "[ Net #" << _uid <<  " ]\n";
+    // cout << "[ Net #" << _uid <<  " ]\n";
     cout << "number of subnets: " << getSubnetNum() << endl;
     cout << "(fpga id, fpga id): ";
     for(int i = 0; i < getSubnetNum(); i++){
         cout << "(" << _subnets[i]->getSource()->getId() << "," << _subnets[i]->getTarget()->getId() << ") ";
     }
     cout << endl;
-}
-
-void Edge::updateWeight(int iteration){
-    _weight = (_weight * iteration + pow(2,(float)_congestion/_AvgWeight))/(iteration+1);
-    if(_weight <1)_weight  = 1;
-    //cout<<"Edge "<<this->getId()<<" : "<<_weight<<endl;
 }
 
 void Edge::distributeTDM(){
