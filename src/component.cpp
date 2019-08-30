@@ -11,6 +11,7 @@
 float    Edge::_AvgWeight = 0.0;
 unsigned FPGA::_globalVisit = 0;
 double   Edge::_kRatio = 1;
+double   Net::_avg_group_tdm = 0;
 
 bool netCompare(Net* a, Net* b) { 
     return (a->getWeight() > b->getWeight());
@@ -181,16 +182,6 @@ int NetGroup::getSubnetNum(){
         ret += _nets[i]->getSubnetNum();
     }
     return ret;
-}
-
-void Net::setMin_routetoEdge(){
-    Edge* e;
-    for(size_t i=0;i<_min_route.size();i++){
-        e = _min_route[i];
-        e->addCongestion(1);
-        e->addNet(this);
-    }
-
 }
 
 

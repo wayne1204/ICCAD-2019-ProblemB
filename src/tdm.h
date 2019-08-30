@@ -22,6 +22,7 @@ class TDM
     void findDominantGroup();
     void decomposeNet();
     bool outputFile(const char* fname);
+    void buildMST(Net* n);
     void showStatus(const char* fname);
     void updatekRatio();  
     void global_router(char* fname);

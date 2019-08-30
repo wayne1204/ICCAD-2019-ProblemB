@@ -81,7 +81,6 @@ public:
     FPGA*     getTarget() {return _target;}
 
     // edge weight
-    //double    getWeight(){return pow(2, _congestion / _capacity);}
     double    getWeight(){return pow(2, _congestion / _AvgWeight);}
     void      updateWeight(int iteration);
     void      addCongestion(int i){_congestion += i;}
@@ -136,13 +135,12 @@ public:
     int       getTargetNum(){return _targets.size();}
 
     // route info
-    void      addEdgetoCur_route(Edge* e){ _cur_route.push_back(e);}
+    void      addEdgetoCur_route(Edge* e){ _cur_route.insert(e);}
     void      initializeCur_route(){ _cur_route.clear();}
     int       getCur_routeNum(){ return _cur_route.size();}
     int       getMin_routeNum(){ return _min_route.size();}
     void      updateMin_route(){ _min_route = _cur_route;}
-    void      setMin_routetoEdge();
-    Edge*     getCur_route(int i){return _cur_route[i];}
+    // Edge*     getCur_route(int i){return _cur_route[i];}
 
     // TDM function
     long long int getTDM(){ return _TDM;}
@@ -167,6 +165,7 @@ public:
     void      addGroup(NetGroup* g) {_netgroup.push_back(g); }
     NetGroup* getNetGroup(unsigned i) {return _netgroup[i]; }
     int       getGroupSize() {return _netgroup.size();}
+    static void setAvgGroupTDM(double a) {_avg_group_tdm = a;}
     //unordered_map<int, long long int> Min_edge_tdm; //edgeID -> TDM
     vector<long long int>Min_edge_tdm;
 
@@ -175,13 +174,16 @@ private:
     unsigned           _uid;
     double             _weight;
     double             _x;
+    static double      _avg_group_tdm;
     FPGA*              _source;
     long long int      _TDM;
     vector<NetGroup*>  _netgroup;	
     vector<FPGA*>      _targets;
     vector<SubNet*>    _subnets;     //vector for Subnet
-    vector<Edge*>      _cur_route;
-    vector<Edge*>      _min_route;
+    set<Edge*>         _cur_route;
+    set<Edge*>         _min_route;
+    // vector<Edge*>      _cur_route;
+    // vector<Edge*>      _min_route;
    //unordered_map<int,long long int>  _edge_tdm;     //edgeID -> TDM
     vector<long long int> _edge_tdm;
 };
