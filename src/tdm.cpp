@@ -74,7 +74,7 @@ bool TDM::parseFile(const char *fname)
 
     // nets
     _net_V.reserve(nums[2]);
-    Net::setEdgeSize(_edge_V.size());
+    Net::setEdgeSize(nums[1]);
     for (int i = 0; i < nums[2]; ++i)
     {
         getline(fs, line);
@@ -89,7 +89,7 @@ bool TDM::parseFile(const char *fname)
             n->setTarget(_FPGA_V[value]);
             _FPGA_V[value]->addUsage();
         }
-        n->initEdgeTDM(nums[1]);
+        // n->initEdgeTDM(nums[1]);
         _net_V.push_back(n);
     }
 
@@ -176,11 +176,17 @@ void TDM::preRoute(){
 
 // find domimant group
 void TDM::findDominantGroup(){
+    cout << " [finding dominant group] " << endl;
+    clock_t start,end;
+    start = clock();
+    long long int total_subnet = 0;
     sort(_group_V.begin(), _group_V.end(), groupCompare);
     for(size_t i = 0; i < _group_V.size(); ++i){
-        _avg_net += ((double)_group_V[i]->getNetNum() / _group_V.size());
-        _avg_subnet += ((double)_group_V[i]->getSubnetNum() / _group_V.size());
+        // total_net += _group_V[i]->getNetNum();
+        total_subnet += _group_V[i]->getSubnetNum();
     }
+    // _avg_net = (double)total_net / (int)_group_V.size();
+    _avg_subnet = (double)total_subnet / (int)_group_V.size();
     int i = 0;
 
     while(_group_V[i]->getSubnetNum() > 3 * _avg_subnet){
@@ -201,8 +207,10 @@ void TDM::findDominantGroup(){
     }
 
     cout << " Dominant group subnets:" << _group_V[0]->getSubnetNum() <<endl;
-    cout << " avg_net:" << _avg_net << " avg_subnet:"<< _avg_subnet 
+    cout << " avg_subnet:"<< _avg_subnet 
          << " total subnet:" << _total_subnet << endl;
+    end = clock();
+    cout << " Time used:" << ((double) (end - start)) / CLOCKS_PER_SEC << endl;
     cout << endl;
 }
 
@@ -333,7 +341,6 @@ void TDM::decomposeNet()
         }
     }
 
-    cout << endl;
     end = clock();
     cout << " Time used:" << ((double) (end - start)) / CLOCKS_PER_SEC << endl;
     cout << endl;
