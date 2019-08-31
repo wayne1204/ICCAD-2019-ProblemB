@@ -11,7 +11,7 @@
 float    Edge::_AvgWeight = 0.0;
 unsigned FPGA::_globalVisit = 0;
 double   Edge::_kRatio = 1;
-double   Net::_avg_group_tdm = 0;
+int      Net::_edge_tdm_size = 0;
 
 bool netCompare(Net* a, Net* b) { 
     return (a->getWeight() > b->getWeight());
@@ -98,7 +98,7 @@ void Net::initEdgeTDM(int size){
 }
 
 void Net::clearEdgeTDM(){
-    fill(_edge_tdm.begin(), _edge_tdm.end(), 0);
+    _edge_tdm.resize(_edge_tdm_size, 0);
 }
 
 void Net::showInfo(){
@@ -126,7 +126,7 @@ void Edge::distributeTDM(){
     size_t i;
     for(i = 0; i < _route.size() ; ++i){
         // if(_route[i]->isDominant()){
-            long long int new_tdm = ceil(total_sum/(_route[i]->getWeight() * _route[i]->getX()));
+            unsigned new_tdm = ceil(total_sum/(_route[i]->getWeight() * _route[i]->getX()));
             new_tdm = (new_tdm % 2 == 0) ? new_tdm : new_tdm + 1;
             assert(new_tdm > 0);
             _route[i]->setedgeTDM(_uid, new_tdm);

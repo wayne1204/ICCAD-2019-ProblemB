@@ -112,6 +112,7 @@ public:
     Net(){
         // _uid = id;
         _isDominant = false;
+        _edgeNum = 0;
         _weight = 0;
         _x = 1;
     }
@@ -120,7 +121,6 @@ public:
     void      setSource(FPGA* f) { _source = f;}
     void      setTarget(FPGA* f) { _targets.push_back(f);}
     void      setDominant() {_isDominant = true;}
-    void      setNonDominat() {_isDominant = false;}
     bool      isDominant() {return _isDominant;}
     void      setWeight(double w);
     double    getWeight() {return _weight;}
@@ -132,24 +132,21 @@ public:
     int       getTargetNum(){return _targets.size();}
 
     // route info
-    void      addEdgetoCur_route(Edge* e){ _cur_route.insert(e);}
-    void      initializeCur_route(){ _cur_route.clear();}
-    int       getCur_routeNum(){ return _cur_route.size();}
-    int       getMin_routeNum(){ return _min_route.size();}
-    void      updateMin_route(){ _min_route = _cur_route;}
-    // Edge*     getCur_route(int i){return _cur_route[i];}
+    void        addEdgeNum() {_edgeNum++; }
+    void        resetEdgeNum() {_edgeNum = 0;}
+    int         getEdgeNum() {return _edgeNum;}
+    static void setEdgeSize(int s) {_edge_tdm_size = s;}
 
     // TDM function
-    long long int getTDM(){ return _TDM;}
-    int       getedgeTDM(int i){ return _edge_tdm[i];}
+    unsigned  getTDM(){ return _TDM;}
+    unsigned  getedgeTDM(int i){ return _edge_tdm[i];}
     void      updateMin_edge_TDM(){ Min_edge_tdm = _edge_tdm;}
-    void      setedgeTDM(int i,long long int c){_edge_tdm[i] = c;}
-    void      setTDM(long long int t){_TDM = t;}
+    void      setedgeTDM(int i, unsigned c){_edge_tdm[i] = c;}
+    void      setTDM(int t){_TDM = t;}
     void      calculateTDM();
     void      calculateMinTDM();
     void      initEdgeTDM(int size);
     void      clearEdgeTDM();
-    //void    updateMin_TDM(){_min_TDM = _TDM;}
     
     // subnet info
     void      decomposition();
@@ -161,27 +158,21 @@ public:
     void      addGroup(NetGroup* g) {_netgroup.push_back(g); }
     NetGroup* getNetGroup(unsigned i) {return _netgroup[i]; }
     int       getGroupSize() {return _netgroup.size();}
-    static void setAvgGroupTDM(double a) {_avg_group_tdm = a;}
-    //unordered_map<int, long long int> Min_edge_tdm; //edgeID -> TDM
-    vector<long long int>Min_edge_tdm;
+    vector<unsigned>Min_edge_tdm;
 
 private:
     // unsigned           _uid;
     bool               _isDominant;
+    int                _edgeNum;
+    static int         _edge_tdm_size;
+    unsigned           _TDM;
     double             _weight;
     double             _x;
-    static double      _avg_group_tdm;
     FPGA*              _source;
-    long long int      _TDM;
     vector<NetGroup*>  _netgroup;	
     vector<FPGA*>      _targets;
     vector<SubNet*>    _subnets;     //vector for Subnet
-    set<Edge*>         _cur_route;
-    set<Edge*>         _min_route;
-    // vector<Edge*>      _cur_route;
-    // vector<Edge*>      _min_route;
-   //unordered_map<int,long long int>  _edge_tdm;     //edgeID -> TDM
-    vector<long long int> _edge_tdm;
+    vector<unsigned>   _edge_tdm;
 };
 
 class SubNet
