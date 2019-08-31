@@ -4,6 +4,7 @@
 #include <iostream>
 #include <set>
 #include <math.h>
+#include <stdio.h>
 #include <limits>
 #include <unordered_set>
 #include <time.h>
@@ -180,7 +181,7 @@ void TDM::findDominantGroup(){
     clock_t start,end;
     start = clock();
     long long int total_subnet = 0;
-    sort(_group_V.begin(), _group_V.end(), groupCompare);
+    sort(_group_V.begin(), _group_V.end(), groupCompare);  // [Note] This is very time-consuming !!
     for(size_t i = 0; i < _group_V.size(); ++i){
         // total_net += _group_V[i]->getNetNum();
         total_subnet += _group_V[i]->getSubnetNum();
@@ -218,29 +219,37 @@ void TDM::findDominantGroup(){
 // output file
 bool TDM::outputFile(const char *fname)
 {
-    fstream fs(fname, ios::out);
+    // ofstream fs(fname, ios::out);
+    FILE * pFile;
+    pFile = fopen(fname, "w");
     clock_t start,end;
-
-    if (!fs.is_open())
-    {
-        return false;
-    }
 
     cout << "\n [outputting] \n";
     start = clock();
 
+    // for (size_t i = 0; i < _net_V.size(); i++)
+    // {
+    //     Net *n = _net_V[i];
+    //     fs << n->getEdgeNum() << '\n';
+    //     for(size_t i = 0; i < n->Min_edge_tdm.size();i ++){
+    //         if(n->Min_edge_tdm[i] != 0){
+    //             fs << i << " " << n->Min_edge_tdm[i] << '\n';
+    //         }
+    //     }
+    // }
     for (size_t i = 0; i < _net_V.size(); i++)
     {
         Net *n = _net_V[i];
-        int edgeNum = n->getEdgeNum();
-        fs << edgeNum << endl;
-        for(size_t i = 0; i < n->Min_edge_tdm.size();i++){
-            if(n->Min_edge_tdm[i]!=0){
-                fs << i << " "<< n->Min_edge_tdm[i]<<endl;
+        fprintf(pFile, "%d\n", n->getEdgeNum());
+        int edgeSize = n->Min_edge_tdm.size();
+        for(int i = 0; i < edgeSize; i++){
+            if(n->Min_edge_tdm[i] != 0){
+                fprintf(pFile, "%d %u\n", i, n->Min_edge_tdm[i]);
             }
         }
     }
-    fs.close();
+    // fs.close();
+    fclose(pFile);
 
     end = clock();
     cout << " Time used:" << ((double) (end - start)) / CLOCKS_PER_SEC << endl;
@@ -445,7 +454,7 @@ void TDM::global_router(char* fname)
 
 
         for (size_t i = 0; i < _net_V.size(); i++) {
-            _net_V[i]->clearEdgeTDM();
+            _net_V[i]->resetEdgeTDM();
         }
         // Distribute all TDM and calculate all TDM
         {

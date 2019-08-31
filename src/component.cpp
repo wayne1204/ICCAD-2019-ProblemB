@@ -93,11 +93,9 @@ void Net::setWeight(double w){
         _weight = w ;
 }
 
-void Net::initEdgeTDM(int size){
-    _edge_tdm.resize(size, 0);
-}
 
-void Net::clearEdgeTDM(){
+void Net::resetEdgeTDM(){
+    // _edge_tdm.clear();  // [Note] only calling resize() will not reset all values to 0
     _edge_tdm.resize(_edge_tdm_size, 0);
 }
 

@@ -145,8 +145,7 @@ public:
     void      setTDM(int t){_TDM = t;}
     void      calculateTDM();
     void      calculateMinTDM();
-    void      initEdgeTDM(int size);
-    void      clearEdgeTDM();
+    void      resetEdgeTDM();
     
     // subnet info
     void      decomposition();
