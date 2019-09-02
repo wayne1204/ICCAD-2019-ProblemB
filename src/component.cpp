@@ -168,12 +168,12 @@ void NetGroup::updateTDM(){
 }
 
 
-int NetGroup::getSubnetNum(){
+void NetGroup::sumSubnetNum(){
     int ret = 0;
     for(size_t i = 0; i < _nets.size(); ++i){
         ret += _nets[i]->getSubnetNum();
     }
-    return ret;
+    _subnetnum = ret;
 }
 
 

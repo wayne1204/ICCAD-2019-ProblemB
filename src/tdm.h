@@ -35,8 +35,8 @@ class TDM
     
     int               _domiantGroupCount;  // number of dominat count
     double            _avg_net;
+    long long int     _total_subnet;
     double            _avg_subnet;
-    int               _total_subnet;
     vector<bool>      _pathcheck_V; // for each net to check whether the FPGA is connected or not, then we can stop Dijkstras
     vector<FPGA*>     _FPGA_V;
     vector<Edge*>     _edge_V;

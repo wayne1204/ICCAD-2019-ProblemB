@@ -180,25 +180,23 @@ void TDM::findDominantGroup(){
     cout << " [finding dominant group] " << endl;
     clock_t start,end;
     start = clock();
-    long long int total_subnet = 0;
-    sort(_group_V.begin(), _group_V.end(), groupCompare);  // [Note] This is very time-consuming !!
+    // long long int total_subnet = 0;
+    // sort(_group_V.begin(), _group_V.end(), groupCompare);  // [Note] This is very time-consuming !!
     for(size_t i = 0; i < _group_V.size(); ++i){
         // total_net += _group_V[i]->getNetNum();
-        total_subnet += _group_V[i]->getSubnetNum();
+        _group_V[i]->sumSubnetNum();
+        _total_subnet += _group_V[i]->getSubnetNum();
     }
-    // _avg_net = (double)total_net / (int)_group_V.size();
-    _avg_subnet = (double)total_subnet / (int)_group_V.size();
-    int i = 0;
 
-    while(_group_V[i]->getSubnetNum() > 3 * _avg_subnet){
+    _avg_subnet = (double)_total_subnet / (int)_group_V.size();
+
+    for(size_t i = 0; i < _group_V.size(); ++i){
+        if(_group_V[i]->getSubnetNum() < 3 * _avg_subnet)
+            continue;
         _group_V[i]->setDominant();
         ++_domiantGroupCount;
-        ++i;
     }
   
-    for(size_t i = 0; i < _net_V.size(); ++i){
-        _total_subnet += _net_V[i]->getSubnetNum();
-    }
 
     for(size_t i = 0; i < _group_V.size(); ++i){
         double w = (double)_group_V[i]->getSubnetNum() / _avg_subnet;
@@ -333,18 +331,18 @@ void TDM::decomposeNet()
         for(int k = 0; k < target_num; ++k){
             twopin[ parent[n->getTarget(k)->getId()]->getId() ].push_back(n->getTarget(k));
         }
-        stack<int> popstack;
+        queue<int> Q;
         FPGA* popFPGA;
         int popidx = source->getId();
-        popstack.push(popidx);
-        while(!popstack.empty()){
-            popidx = popstack.top();
-            popstack.pop();
+        Q.push(popidx);
+        while(!Q.empty()){
+            popidx = Q.front();
+            Q.pop();
             for(size_t j = 0; j < twopin[popidx].size(); ++j){
                 popFPGA = twopin[popidx][j];
                 SubNet* sn = new SubNet(_FPGA_V[popidx],popFPGA);
                 n->setSubNet(sn);
-                popstack.push(popFPGA->getId());
+                Q.push(popFPGA->getId());
             }
             
         }
@@ -420,6 +418,7 @@ void TDM::showStatus(const char* fname)
 
 void TDM::global_router(char* fname)
 {
+    clock_t start, end;
     //phase1
     cout << " [routing] " <<endl;
     long long int minimumTDM = numeric_limits<long long int>::max();
@@ -427,6 +426,8 @@ void TDM::global_router(char* fname)
 
     _pathcheck_V.reserve(_FPGA_V.size());
 
+    cout << "[sorting]" << endl;
+    start = clock();
     set<pIN> sorted_net;
     for (size_t i = 0; i < _net_V.size(); i++)
     {
@@ -436,26 +437,33 @@ void TDM::global_router(char* fname)
             sub_net = max(sub_net, _net_V[i]->getNetGroup(j)->getSubnetNum());
         }
         sorted_net.insert(pIN(sub_net + _net_V[i]->getSubnetNum(), _net_V[i]));
-    }    
+    }
+    end = clock();
+    cout << " Time used:" << ((double) (end - start)) / CLOCKS_PER_SEC << endl;
+    
     
     while(true){
-        clock_t start, end;
         start = clock();
         if(iteration == 0){
             //Initialize Edge's congestion to zero every iteration
-            for (size_t i = 0; i < _edge_V.size(); i++){
-                _edge_V[i]->initCongestion();
-                _edge_V[i]->resetNet();
-            }
+            // for (size_t i = 0; i < _edge_V.size(); i++){
+            //     _edge_V[i]->initCongestion();
+            //     _edge_V[i]->resetNet();
+            // }
             //Use shortest path algorithm to route all net
             local_router(true, sorted_net);
+
+            // for(size_t i = 0; i < _edge_V.size(); ++i){
+            //     _edge_V[i]->doubleCongestion();
+            // }
+
             local_router(false, sorted_net);
+            for (size_t i = 0; i < _net_V.size(); i++) {
+                _net_V[i]->resetEdgeTDM();
+            }
         }
 
 
-        for (size_t i = 0; i < _net_V.size(); i++) {
-            _net_V[i]->resetEdgeTDM();
-        }
         // Distribute all TDM and calculate all TDM
         {
             ctpl::thread_pool p(8);
@@ -606,7 +614,8 @@ struct pDFcomp {
 void TDM::Dijkstras(FPGA *source, FPGA *target, unsigned int num, Net* n)
 {
     double maxf = numeric_limits<double>::max();
-    int c = n->isDominant() ? 2: 1;
+    // int c = n->isDominant() ? 2: 1;
+    int c = 1;
     my_pq Q;
     my_pq::point_iterator iter_V [num];
     vector<double> d(num, maxf); // distance

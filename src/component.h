@@ -82,6 +82,7 @@ public:
     // edge weight
     double    getWeight(){return pow(2, _congestion / _AvgWeight);}
     void      addCongestion(int i){_congestion += i;}
+    void      doubleCongestion(){_congestion *= 2;}
     void      initCongestion(){_congestion = 0;}
     void      addCapacity(double i) {_capacity += i;}
     double    getCapacity() {return _capacity;}
@@ -212,7 +213,8 @@ public:
     bool          isDominant() {return _isDominant; }
     void          addNet(Net* n) {_nets.push_back(n);}
     int           getNetNum() {return _nets.size();}
-    int           getSubnetNum();
+    void          sumSubnetNum();
+    int           getSubnetNum(){return _subnetnum;}
     Net*          getNet(int i){return _nets[i];}
 
     // TDM function
@@ -222,6 +224,7 @@ public:
 private:
     // unsigned       _uid;
     bool           _isDominant;  // is dominat group
+    int            _subnetnum;
     long long int  _TDM;
     vector<Net*>   _nets;
 };
