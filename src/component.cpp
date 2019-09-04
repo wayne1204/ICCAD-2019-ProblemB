@@ -93,6 +93,19 @@ void Net::setWeight(double w){
         _weight = w ;
 }
 
+void Net::updateWeight(){
+    _weight *= _x;
+    _x = 1;
+}
+void Net::setX(double x){
+    if(x > _x)
+        _x = x;
+}
+
+void Net::setGroupSubnet(int s){
+    if(s > _group_subnet)
+        _group_subnet = s;
+}
 
 void Net::resetEdgeTDM(){
     // _edge_tdm.clear();  // [Note] only calling resize() will not reset all values to 0
@@ -117,14 +130,14 @@ void Edge::distributeTDM(){
         // if(!_route[i]->isDominant()){
         //     sum += _route[i]->getWeight() * _route[i]->getX();
         // }
-        total_sum += _route[i]->getWeight() * _route[i]->getX();
+        total_sum += _route[i]->getWeight();
     }  
 
     // double total_TDM = 1;
     size_t i;
     for(i = 0; i < _route.size() ; ++i){
         // if(_route[i]->isDominant()){
-            unsigned new_tdm = ceil(total_sum/(_route[i]->getWeight() * _route[i]->getX()));
+            unsigned new_tdm = ceil(total_sum/(_route[i]->getWeight()));
             new_tdm = (new_tdm % 2 == 0) ? new_tdm : new_tdm + 1;
             assert(new_tdm > 0);
             _route[i]->setedgeTDM(_uid, new_tdm);

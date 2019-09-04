@@ -96,7 +96,6 @@ bool TDM::parseFile(const char *fname)
 
     Edge::_AvgWeight = float(nums[2]) / float(nums[1]);
     cout << " Edge average weight:" << Edge::_AvgWeight <<endl;
-
     // groups
     _group_V.reserve(nums[3]);
     for (int i = 0; i < nums[3]; ++i)
@@ -109,7 +108,7 @@ bool TDM::parseFile(const char *fname)
             begin = getToken(begin, line, token);
             value = atoi(token.c_str());
             g->addNet(_net_V[value]);
-            _net_V[value]->addGroup(g);
+            // _net_V[value]->addGroup(g);
         }
         _group_V.push_back(g);
     }
@@ -170,8 +169,6 @@ void TDM::preRoute(){
             _FPGA_V[i]->getEdge(j)->addCapacity(cap);
         }
     }
-
-
 }
 
 
@@ -197,7 +194,6 @@ void TDM::findDominantGroup(){
         ++_domiantGroupCount;
     }
   
-
     for(size_t i = 0; i < _group_V.size(); ++i){
         double w = (double)_group_V[i]->getSubnetNum() / _avg_subnet;
         for(int j = 0; j < _group_V[i]->getNetNum(); ++j){
@@ -293,11 +289,8 @@ void TDM::decomposeNet()
         for(int k = 0; k < target_num; ++k){
             targetFPGA = n->getTarget(k);
             id = targetFPGA->getId();
-
-            if(!_FPGA_V[id]->isVisited() && _distance[source->getId()][id]<key[id]){
-                parent[id] = source;
-                key[id] =   _distance[source->getId()][id];
-            }
+            parent[id] = source;
+            key[id] =   _distance[source->getId()][id];
         }
         for(int k = 0; k < target_num; ++k){
             int min = maxInt;
@@ -323,11 +316,7 @@ void TDM::decomposeNet()
                 }
             }
         }
-        vector< vector<FPGA*> >twopin;
-        for(size_t i = 0; i < _FPGA_V.size(); ++i){
-            vector<FPGA*> s;
-            twopin.push_back(s);
-        }
+        vector< vector<FPGA*> >twopin(_FPGA_V.size());
         for(int k = 0; k < target_num; ++k){
             twopin[ parent[n->getTarget(k)->getId()]->getId() ].push_back(n->getTarget(k));
         }
@@ -420,28 +409,29 @@ void TDM::global_router(char* fname)
 {
     clock_t start, end;
     //phase1
-    cout << " [routing] " <<endl;
     long long int minimumTDM = numeric_limits<long long int>::max();
     int iteration = 0, terminateCount = 0, section = 1;
 
     _pathcheck_V.reserve(_FPGA_V.size());
 
-    cout << "[sorting]" << endl;
+    cout << " [sorting]" << endl;
     start = clock();
+    // sort net
     set<pIN> sorted_net;
-    for (size_t i = 0; i < _net_V.size(); i++)
-    {
-        int sub_net = 0;
-        for (int j = 0; j < _net_V[i]->getGroupSize(); ++j)
-        {
-            sub_net = max(sub_net, _net_V[i]->getNetGroup(j)->getSubnetNum());
+    for(size_t i = 0; i < _group_V.size(); ++i){
+        for(int j = 0; j < _group_V[i]->getNetNum(); ++j){
+            Net* n = _group_V[i]->getNet(j);
+            n->setGroupSubnet(_group_V[i]->getSubnetNum());
         }
-        sorted_net.insert(pIN(sub_net + _net_V[i]->getSubnetNum(), _net_V[i]));
+    }
+    for(size_t i = 0; i < _net_V.size(); ++i){
+        sorted_net.insert(pIN( _net_V[i]->getGroupSubnet() + _net_V[i]->getSubnetNum(), _net_V[i]));
     }
     end = clock();
     cout << " Time used:" << ((double) (end - start)) / CLOCKS_PER_SEC << endl;
     
     
+    cout << " [routing] " <<endl;
     while(true){
         start = clock();
         if(iteration == 0){
@@ -463,7 +453,6 @@ void TDM::global_router(char* fname)
             }
         }
 
-
         // Distribute all TDM and calculate all TDM
         {
             ctpl::thread_pool p(8);
@@ -471,14 +460,14 @@ void TDM::global_router(char* fname)
                 p.push([](int id, Edge* e){e->distributeTDM();}, _edge_V[i]);
             }
         }
-        
         for (size_t i = 0; i < _net_V.size(); i++){
             _net_V[i]->calculateTDM();
         }
+
+        // find average and max group TDM
         long long int maxGroupTDM = 0;
         int group_id = -1;
         double avg_group_tdm = 0;
-
         for (size_t i = 0; i < _group_V.size(); i++){
             _group_V[i]->updateTDM();
             if(_group_V[i]->getTDM() > maxGroupTDM){
@@ -489,14 +478,16 @@ void TDM::global_router(char* fname)
         }
         avg_group_tdm /= (int)_group_V.size();
 
-        for(size_t i = 0; i < _net_V.size(); i++){
-            double x = 0.0;
-            for(int j = 0; j < _net_V[i]->getGroupSize(); j++){
-                x = max(x,_net_V[i]->getNetGroup(j)->getTDM() / avg_group_tdm);
+        // find X by TDM ratio
+        for(size_t i = 0; i < _group_V.size(); ++i){
+            for(int j = 0; j < _group_V[i]->getNetNum(); ++j){
+                _group_V[i]->getNet(j)->setX(_group_V[i]->getTDM() / avg_group_tdm);
             }
-            double prev_x = _net_V[i]->getX();
-            _net_V[i]->setX(x*prev_x);
         }
+        for(size_t i = 0; i < _net_V.size(); ++i){
+            _net_V[i]->updateWeight();
+        }
+
         //Terminate condition : Compare with minimum answer. If we can't update  minimum answer more than N times, terminate global router.
         if ( maxGroupTDM < minimumTDM) {
 
@@ -509,13 +500,6 @@ void TDM::global_router(char* fname)
                 for (size_t i = 0; i < _net_V.size(); i++){
                     // _net_V[i]->updateMin_route();
                     _net_V[i]->updateMin_edge_TDM();
-                }
-                
-                for (size_t i = 0; i < _net_V.size(); i++){
-                    _net_V[i]->calculateMinTDM();
-                }
-                for (size_t i = 0; i < _group_V.size(); i++){
-                    _group_V[i]->updateTDM();
                 }
                 break;
             }       

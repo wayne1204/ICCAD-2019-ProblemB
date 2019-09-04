@@ -116,6 +116,7 @@ public:
         _edgeNum = 0;
         _weight = 0;
         _x = 1;
+        _group_subnet = 0;
     }
     // basic info
     // int       getId(){ return _uid;}
@@ -124,8 +125,9 @@ public:
     void      setDominant() {_isDominant = true;}
     bool      isDominant() {return _isDominant;}
     void      setWeight(double w);
+    void      updateWeight();
     double    getWeight() {return _weight;}
-    void      setX(double x) { _x = x;}
+    void      setX(double x);
     double    getX() {return _x;}       
     FPGA*     getSource() {return _source;}
     FPGA*     getTarget(int i) {return _targets[i];}
@@ -155,21 +157,24 @@ public:
     void      setSubNet(SubNet* sn){_subnets.push_back(sn);}
 
     // group info
-    void      addGroup(NetGroup* g) {_netgroup.push_back(g); }
-    NetGroup* getNetGroup(unsigned i) {return _netgroup[i]; }
-    int       getGroupSize() {return _netgroup.size();}
+    void      setGroupSubnet(int s);
+    int       getGroupSubnet(){return _group_subnet;}
+    // void      addGroup(NetGroup* g) {_netgroup.push_back(g); }
+    // NetGroup* getNetGroup(unsigned i) {return _netgroup[i]; }
+    // int       getGroupSize() {return _netgroup.size();}
     vector<unsigned>Min_edge_tdm;
 
 private:
     // unsigned           _uid;
     bool               _isDominant;
     int                _edgeNum;
+    int                _group_subnet;
     static int         _edge_tdm_size;
     unsigned           _TDM;
     double             _weight;
     double             _x;
     FPGA*              _source;
-    vector<NetGroup*>  _netgroup;	
+    // vector<NetGroup*>  _netgroup;	
     vector<FPGA*>      _targets;
     vector<SubNet*>    _subnets;     //vector for Subnet
     vector<unsigned>   _edge_tdm;
