@@ -81,12 +81,13 @@ bool TDM::parseFile(const char *fname)
         getline(fs, line);
         Net *n = new Net();
         size_t begin = getToken(0, line, token);
-        n->setSource(_FPGA_V[stoi(token)]);
-        _FPGA_V[stoi(token)]->addUsage();
+        value = strToInt(token);
+        n->setSource(_FPGA_V[value]);
+        _FPGA_V[value]->addUsage();
         while (begin != string::npos)
         {
             begin = getToken(begin, line, token);
-            value = atoi(token.c_str());
+            value = strToInt(token);
             n->setTarget(_FPGA_V[value]);
             _FPGA_V[value]->addUsage();
         }
@@ -106,7 +107,7 @@ bool TDM::parseFile(const char *fname)
         while (begin != string::npos)
         {
             begin = getToken(begin, line, token);
-            value = atoi(token.c_str());
+            value = strToInt(token);
             g->addNet(_net_V[value]);
             // _net_V[value]->addGroup(g);
         }
@@ -283,6 +284,23 @@ void TDM::decomposeNet()
             n->setSubNet(sn);
             continue;
         }
+        else if(target_num == 2){
+            int ab = _distance[n->getSource()->getId()][n->getTarget(0)->getId()];
+            int ac = _distance[n->getSource()->getId()][n->getTarget(1)->getId()];
+            int bc = _distance[n->getTarget(0)->getId()][n->getTarget(1)->getId()];
+            if(ab > ac && ab > bc){
+                n->setSubNet(new SubNet(n->getSource(), n->getTarget(1)));
+                n->setSubNet(new SubNet(n->getTarget(1), n->getTarget(0)));
+            }
+            else if(ac > ab && ac > bc){
+                n->setSubNet(new SubNet(n->getSource(), n->getTarget(0)));
+                n->setSubNet(new SubNet(n->getTarget(0), n->getTarget(1)));
+            }else{
+                n->setSubNet(new SubNet(n->getSource(), n->getTarget(0)));
+                n->setSubNet(new SubNet(n->getSource(), n->getTarget(1)));
+            }
+            continue;
+        }
         //construct MST
         parent.clear();
         key.clear();
@@ -315,15 +333,15 @@ void TDM::decomposeNet()
                 }
             }
             FPGA* minFPGA = _FPGA_V[minidx];
-            int u = minFPGA->getId();
-            _FPGA_V[u]->setVisited(true);
+            _FPGA_V[minidx]->setVisited(true);
             for(int j = 0; j < target_num; ++j){
                 targetFPGA = n->getTarget(j);
-                if(targetFPGA == minFPGA)continue;
+                if(targetFPGA == minFPGA)
+                    continue;
                 id = targetFPGA->getId();
-                if(!_FPGA_V[id]->isVisited() && _distance[u][id]<key[id]){
+                if(!_FPGA_V[id]->isVisited() && _distance[minidx][id] < key[id]){
                     parent[id] = minFPGA;
-                    key[id] =   _distance[u][id];
+                    key[id] =   _distance[minidx][id];
                 }
             }
         }
@@ -476,7 +494,6 @@ void TDM::global_router(char* fname)
         for (size_t i = 0; i < _net_V.size(); i++){
             _net_V[i]->calculateTDM();
         }
-
         // find average and max group TDM
         long long int maxGroupTDM = 0;
         int group_id = -1;
@@ -619,17 +636,18 @@ void TDM::Dijkstras(FPGA *source, FPGA *target, unsigned int num, Net* n)
     my_pq::point_iterator iter_V [num];
     vector<double> d(num, maxf); // distance
     vector<pFE> parent(num);     // record parentId and edge to parent
-    vector<bool> visited(num,false);
 
     d[source->getId()] = 0.0;
     parent[source->getId()] = pFE(source, NULL);
     iter_V[source->getId()] = Q.push(pDF(0, source));
 
     FPGA *a = NULL;
+    FPGA::setGlobalVisit();
     while (!Q.empty())
     {
         pDF top = Q.top();
         Q.pop();
+        top.second->setVisited(true);
         
         a = top.second;
         if (a == target){
@@ -639,13 +657,12 @@ void TDM::Dijkstras(FPGA *source, FPGA *target, unsigned int num, Net* n)
             break; // Find the steiner point
         }
         double w;
-        visited[a->getId()] = true;
         FPGA *b;
         Edge *e;
         for (int i = 0; i < a->getEdgeNum(); i++)
         {
             b = a->getConnectedFPGA(i);
-            if(visited[b->getId()])
+            if(b->isVisited())
                 continue;
             e = a->getEdge(i);
             w = e->getWeight() + _distance[a->getId()][source->getId()] ;
@@ -754,4 +771,12 @@ void TDM::local_router(bool b, set<pIN>& sorted_net)
             }
         }
     }
+}
+
+int TDM::strToInt(string& s){
+    int ret = 0;
+    for(size_t i = 0; i < s.length(); ++i){
+        ret = ret * 10 + s[i] - '0';
+    }
+    return ret;
 }

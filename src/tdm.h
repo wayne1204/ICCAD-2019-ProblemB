@@ -32,6 +32,7 @@ class TDM
 
     private:
     size_t getToken(size_t pos, string& s, string& token);
+    int    strToInt(string& s);
     //stack<pFE> Dijkstras(FPGA* source,FPGA* target,unsigned int num);
     void Dijkstras(FPGA* source,FPGA* target,unsigned int num, Net* n);
     void local_router(bool b, set<pIN>&);

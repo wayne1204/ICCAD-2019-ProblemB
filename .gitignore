@@ -4,6 +4,8 @@ input/synopsys*
 output/*
 figure/*
 log/*
+src/table.*
+src/lookup_table.txt
 
 cada0030
 *.o
