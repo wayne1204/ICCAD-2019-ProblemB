@@ -176,6 +176,7 @@ void TDM::preRoute(){
 void TDM::findDominantGroup(){
     cout << " [finding dominant group] " << endl;
     clock_t start,end;
+    double max_w = 0;
     start = clock();
     // long long int total_subnet = 0;
     // sort(_group_V.begin(), _group_V.end(), groupCompare);  // [Note] This is very time-consuming !!
@@ -196,9 +197,19 @@ void TDM::findDominantGroup(){
   
     for(size_t i = 0; i < _group_V.size(); ++i){
         double w = (double)_group_V[i]->getSubnetNum() / _avg_subnet;
+        max_w = max(w,max_w);
+        if(_group_V[i]->isDominant())
+            w *= 0.8;
         for(int j = 0; j < _group_V[i]->getNetNum(); ++j){
             _group_V[i]->getNet(j)->setWeight(w);
         }
+    }
+
+    if(max_w > 100){
+        _iteration_limit = 3;
+    }
+    else{
+        _iteration_limit = 20;
     }
 
     cout << " Dominant group subnets:" << _group_V[0]->getSubnetNum() <<endl;
@@ -432,6 +443,8 @@ void TDM::global_router(char* fname)
     
     
     cout << " [routing] " <<endl;
+
+    
     while(true){
         start = clock();
         if(iteration == 0){
@@ -488,9 +501,10 @@ void TDM::global_router(char* fname)
             _net_V[i]->updateWeight();
         }
 
+        int tdm_diff = 0;
         //Terminate condition : Compare with minimum answer. If we can't update  minimum answer more than N times, terminate global router.
         if ( maxGroupTDM < minimumTDM) {
-
+            tdm_diff = minimumTDM - maxGroupTDM;
             minimumTDM = maxGroupTDM;
         }
         else{
@@ -506,10 +520,11 @@ void TDM::global_router(char* fname)
         }
 
         end = clock();
+        double totalt =  ((double) (end - getStarttime())) / CLOCKS_PER_SEC;
         double t =  ((double) (end - start)) / CLOCKS_PER_SEC;
         printf(" #%d section:%d  current: %lld (id:%d)| min: %lld time:%.3f \n", 
         iteration, section, maxGroupTDM, group_id, minimumTDM, t);
-        if(iteration++ > 100){
+        if(iteration++ >= _iteration_limit && (minimumTDM*log2(totalt/(totalt-t))) > tdm_diff ){
             for (size_t i = 0; i < _net_V.size(); i++){
                 // _net_V[i]->updateMin_route();
                 _net_V[i]->updateMin_edge_TDM();
@@ -604,6 +619,7 @@ void TDM::Dijkstras(FPGA *source, FPGA *target, unsigned int num, Net* n)
     my_pq::point_iterator iter_V [num];
     vector<double> d(num, maxf); // distance
     vector<pFE> parent(num);     // record parentId and edge to parent
+    vector<bool> visited(num,false);
 
     d[source->getId()] = 0.0;
     parent[source->getId()] = pFE(source, NULL);
@@ -623,11 +639,14 @@ void TDM::Dijkstras(FPGA *source, FPGA *target, unsigned int num, Net* n)
             break; // Find the steiner point
         }
         double w;
+        visited[a->getId()] = true;
         FPGA *b;
         Edge *e;
         for (int i = 0; i < a->getEdgeNum(); i++)
         {
             b = a->getConnectedFPGA(i);
+            if(visited[b->getId()])
+                continue;
             e = a->getEdge(i);
             w = e->getWeight() + _distance[a->getId()][source->getId()] ;
 

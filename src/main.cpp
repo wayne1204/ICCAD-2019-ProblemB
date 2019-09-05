@@ -18,6 +18,7 @@ int main(int argc, char** argv){
         cout << "file \"" << argv[1] << "\" not found!\n";
         return -1;
     }
+    tdm.setStarttime();
     tdm.decomposeNet();
     tdm.findDominantGroup();
     tdm.preRoute();

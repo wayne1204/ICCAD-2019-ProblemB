@@ -80,7 +80,7 @@ public:
     FPGA*     getTarget() {return _target;}
 
     // edge weight
-    double    getWeight(){return pow(2, _congestion / _AvgWeight);}
+    double    getWeight();
     void      addCongestion(int i){_congestion += i;}
     void      doubleCongestion(){_congestion *= 2;}
     void      initCongestion(){_congestion = 0;}

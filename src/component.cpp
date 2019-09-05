@@ -153,6 +153,20 @@ void Edge::distributeTDM(){
     // }
 }
 
+double Edge::getWeight(){
+    int pow = 3;
+    double l2 = log(2);
+    double x = (_congestion/_AvgWeight) - 1;
+    double b = l2*x;
+    double w = 0;
+
+    for(int i = 0; i < pow; ++i){
+        w = w*b + b;
+    }
+
+    return (1 + w*2);
+}
+
 int Edge::getTableValue(int congestion, int rank){
     if(congestion % 2 == 0){
         return congestion;
