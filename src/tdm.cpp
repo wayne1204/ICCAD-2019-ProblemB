@@ -212,8 +212,9 @@ void TDM::findDominantGroup(){
     else{
         _iteration_limit = 20;
     }
-
-    cout << " Dominant group subnets:" << _group_V[0]->getSubnetNum() <<endl;
+    Edge::_AvgWeight = (double)_group_V[0]->getSubnetNum() / _edge_V.size();
+    cout << " Dominant group subnets:" << _group_V[0]->getSubnetNum();
+    cout << " weight: " << Edge::_AvgWeight << endl;
     cout << " avg_subnet:"<< _avg_subnet 
          << " total subnet:" << _total_subnet << endl;
     end = clock();
@@ -474,9 +475,12 @@ void TDM::global_router(char* fname)
             //Use shortest path algorithm to route all net
             local_router(true, sorted_net);
 
-            // for(size_t i = 0; i < _edge_V.size(); ++i){
-            //     _edge_V[i]->doubleCongestion();
-            // }
+            long long int total = 0;
+            for(size_t i = 0; i < _net_V.size(); ++i){
+                total += _net_V[i]->getSubnetNum();
+            }
+            Edge::_AvgWeight = (double)total / (int)_edge_V.size();
+            cout << Edge::_AvgWeight << endl;
 
             local_router(false, sorted_net);
             for (size_t i = 0; i < _net_V.size(); i++) {
@@ -541,7 +545,8 @@ void TDM::global_router(char* fname)
         double t =  ((double) (end - start)) / CLOCKS_PER_SEC;
         printf(" #%d section:%d  current: %lld (id:%d)| min: %lld time:%.3f \n", 
         iteration, section, maxGroupTDM, group_id, minimumTDM, t);
-        if(iteration++ >= _iteration_limit && (minimumTDM*log2(totalt/(totalt-t))) > tdm_diff ){
+        // if(iteration++ >= _iteration_limit && (minimumTDM*log2(totalt/(totalt-t))) > tdm_diff ){
+        if(iteration++ > 100){
             for (size_t i = 0; i < _net_V.size(); i++){
                 // _net_V[i]->updateMin_route();
                 _net_V[i]->updateMin_edge_TDM();

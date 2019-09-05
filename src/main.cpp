@@ -10,9 +10,6 @@ int main(int argc, char** argv){
         return -1;
     }
     TDM tdm;
-    // Table* table = new Table;
-    // table->constructTable("lookput_table.txt");
-    // tdm.setTable(table);
 
     if(!tdm.parseFile(argv[1])){
         cout << "file \"" << argv[1] << "\" not found!\n";

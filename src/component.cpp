@@ -154,31 +154,23 @@ void Edge::distributeTDM(){
 }
 
 double Edge::getWeight(){
-    int pow = 3;
-    double l2 = log(2);
-    double x = (_congestion/_AvgWeight) - 1;
-    double b = l2*x;
-    double w = 0;
+    // int power = 3;
+    // double x = (_congestion/_AvgWeight) - 1;
+    // double b = log(2)*x;
+    // double w = 1;
+    // double f = 1;
 
-    for(int i = 0; i < pow; ++i){
-        w = w*b + b;
-    }
+    // for(int i = 0; i < power; ++i){
+    //     w = w + 2*pow(b,i)/f;
+    //     f *= (i+1);
+    // }
 
-    return (1 + w*2);
-}
-
-int Edge::getTableValue(int congestion, int rank){
-    if(congestion % 2 == 0){
-        return congestion;
-    }
-    else{
-        if(rank < (congestion+1)/2 ){
-            return congestion + 1;
-        }
-        else
-            return congestion - 1; 
-    }
-    
+    // return (1 + w*2);
+    // cout << _congestion/_AvgWeight << endl;
+    int penalty = 0;
+    if(_congestion > _AvgWeight)
+        penalty = pow(_congestion - _AvgWeight, 2);
+    return 1 + _congestion + penalty;
 }
 
 void Edge::removeNet(Net* n){
