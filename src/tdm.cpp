@@ -27,7 +27,13 @@ struct pdfCompare{
         return (a.first > b.first);
     }
 };
+struct pifCompare{
+    bool operator()(pIF a, pIF b){
+        return (a.first > b.first);
+    }
+};
 typedef __gnu_pbds::priority_queue<pDF, pdfCompare> my_pq;
+typedef __gnu_pbds::priority_queue<pIF, pifCompare> my_pqn;
 
 
 // parse input file
@@ -199,13 +205,15 @@ void TDM::findDominantGroup(){
     double w = 0.0;
   
     for(size_t i = 0; i < _group_V.size(); ++i){
-        for(int j = 0; j < _group_V[i]->getNetNum(); ++j){
+        /*for(int j = 0; j < _group_V[i]->getNetNum(); ++j){
             for(int k = 0; k < _group_V[i]->getNet(j)->getSubnetNum(); ++k){
                 SubNet *sn = _group_V[i]->getNet(j)->getSubNet(k);
                 w += _distance[sn->getSource()->getId()][sn->getTarget()->getId()];
             }
         }
-        w /= _avg_subnet;
+        w /= _avg_subnet;*/
+        w = (double)_group_V[i]->getSubnetNum()/_avg_subnet;
+        //if(_group_V[i]->isDominant())w *= 0.8;
         max_w = max(w,max_w);
         for(int j = 0; j < _group_V[i]->getNetNum(); ++j){
             _group_V[i]->getNet(j)->setWeight(w);
@@ -277,9 +285,9 @@ void TDM::decomposeNet()
 
     clock_t start,end;
     int maxInt = numeric_limits<int>::max();
-    vector<FPGA*>parent(_FPGA_V.size(),NULL);
+    vector<FPGA*>parent(_FPGA_V.size());
     // vector<bool>visited(_FPGA_V.size(),false);
-    vector<int>key(_FPGA_V.size(),maxInt);
+    vector<int>key(_FPGA_V.size());
 
     start = clock();
 
@@ -298,7 +306,7 @@ void TDM::decomposeNet()
             int bc = _distance[n->getTarget(0)->getId()][n->getTarget(1)->getId()];
             if(ab > ac && ab > bc){
                 n->setSubNet(new SubNet(n->getSource(), n->getTarget(1)));
-                n->setSubNet(new SubNet(n->getTarget(1), n->getTarget(0)));
+                n->setSubNet(new SubNet(n->getTarget(0), n->getTarget(1)));
             }
             else if(ac > ab && ac > bc){
                 n->setSubNet(new SubNet(n->getSource(), n->getTarget(0)));
@@ -309,6 +317,7 @@ void TDM::decomposeNet()
             }
             continue;
         }
+        
         //construct MST
         parent.clear();
         key.clear();
@@ -316,8 +325,10 @@ void TDM::decomposeNet()
         key.resize(_FPGA_V.size(),maxInt);
         FPGA::setGlobalVisit();
 
+        my_pqn MQ;
+        my_pqn::point_iterator iter_V [_FPGA_V.size()];
         FPGA* source = n->getSource();
-
+        vector< vector<FPGA*> >twopin(_FPGA_V.size());
         key[source->getId()] = 0;
         parent[source->getId()] = source;
         _FPGA_V[source->getId()]->setVisited(true);
@@ -328,20 +339,28 @@ void TDM::decomposeNet()
             id = targetFPGA->getId();
             parent[id] = source;
             key[id] =   _distance[source->getId()][id];
+            //FN[id] = FH.push(pIF(key[id],targetFPGA));
+            iter_V[id] = MQ.push(pIF(key[id],targetFPGA));
         }
         for(int k = 0; k < target_num; ++k){
-            int min = maxInt;
+            //int min = maxInt;
             int minidx = -1;
-            FPGA* t;
-            for(int j = 0; j < target_num; ++j){
+            //FPGA* t;
+            /*for(int j = 0; j < target_num; ++j){
                 t = n->getTarget(j);
                 if(!_FPGA_V[t->getId()]->isVisited() && key[t->getId()] < min){
                     min = key[t->getId()];
                     minidx = t->getId();
                 }
-            }
-            FPGA* minFPGA = _FPGA_V[minidx];
-            _FPGA_V[minidx]->setVisited(true);
+            }*/
+            //FPGA* minFPGA = _FPGA_V[minidx];
+            //FPGA* minFPGA = FH.extract_min()->key.second;
+            FPGA* minFPGA = MQ.top().second;
+            MQ.pop();
+            //_FPGA_V[minidx]->setVisited(true);
+            minFPGA->setVisited(true);
+            minidx = minFPGA->getId();
+            twopin[ parent[minidx]->getId() ].push_back(minFPGA);
             for(int j = 0; j < target_num; ++j){
                 targetFPGA = n->getTarget(j);
                 if(targetFPGA == minFPGA)
@@ -350,12 +369,10 @@ void TDM::decomposeNet()
                 if(!_FPGA_V[id]->isVisited() && _distance[minidx][id] < key[id]){
                     parent[id] = minFPGA;
                     key[id] =   _distance[minidx][id];
+                    //FH.decrease_key(FN[id],pIF(key[id],targetFPGA));
+                    MQ.modify(iter_V[id], pIF(key[id], targetFPGA));
                 }
             }
-        }
-        vector< vector<FPGA*> >twopin(_FPGA_V.size());
-        for(int k = 0; k < target_num; ++k){
-            twopin[ parent[n->getTarget(k)->getId()]->getId() ].push_back(n->getTarget(k));
         }
         queue<int> Q;
         FPGA* popFPGA;
@@ -369,6 +386,7 @@ void TDM::decomposeNet()
                 SubNet* sn = new SubNet(_FPGA_V[popidx],popFPGA);
                 n->setSubNet(sn);
                 Q.push(popFPGA->getId());
+                //cout<<"sn :" <<popidx<<" "<<popFPGA->getId()<<" "<<endl;
             }
             
         }
@@ -482,16 +500,18 @@ void TDM::global_router(char* fname)
             //Use shortest path algorithm to route all net
             local_router(true, sorted_net);
 
-            long long int total = 0;
-            for(size_t i = 0; i < _net_V.size(); ++i){
+            //long long int total = 0;
+            /*for(size_t i = 0; i < _net_V.size(); ++i){
                 for(int j = 0; j < _net_V[i]->getSubnetNum(); ++j){
                     SubNet *sn = _net_V[i]->getSubNet(j);
                     total += _distance[sn->getSource()->getId()][sn->getTarget()->getId()];
                 } 
-                // total += _net_V[i]->getSubnetNum();
-            }
-            Edge::_AvgWeight = (double)total / (int)_edge_V.size();
+                total += _net_V[i]->getSubnetNum();
+            }*/
+            //Edge::_AvgWeight = (double)total / (int)_edge_V.size();
+            //Edge::_AvgWeight = (double)_Edge_avg_weight_for_nondominant / (int)_edge_V.size();
             cout << Edge::_AvgWeight << endl;
+            //cout << total << " "<<_Edge_avg_weight_for_nondominant<<endl;
 
             local_router(false, sorted_net);
             for (size_t i = 0; i < _net_V.size(); i++) {
@@ -579,15 +599,6 @@ size_t TDM::getToken(size_t pos, string &s, string &token)
     token = s.substr(begin, end - begin);
     return end;
 }
-
-struct pDFcomp {
-    bool operator() (const pDF& lhs, const pDF& rhs) const
-    {
-        if(lhs.first == rhs.first) return lhs.second->getId() < rhs.second->getId();
-        return lhs.first < rhs.first;
-    }
- };
-
 
 // void TDM::buildMST(Net* n){
 

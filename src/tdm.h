@@ -17,6 +17,7 @@ class TDM
         _avg_net = 0;
         _avg_subnet = 0;
         _total_subnet = 0;
+        //_Edge_avg_weight_for_nondominant = 0;
     }
     bool parseFile(const char* fname);
     void preRoute();
@@ -40,6 +41,7 @@ class TDM
     int               _iteration_limit;
     double            _avg_net;
     long long int     _total_subnet;
+    //long long int     _Edge_avg_weight_for_nondominant;
     double            _avg_subnet;
     vector<bool>      _pathcheck_V; // for each net to check whether the FPGA is connected or not, then we can stop Dijkstras
     vector<FPGA*>     _FPGA_V;
