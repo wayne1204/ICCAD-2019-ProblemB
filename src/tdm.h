@@ -43,7 +43,7 @@ class TDM
     long long int     _total_subnet;
     //long long int     _Edge_avg_weight_for_nondominant;
     double            _avg_subnet;
-    vector<bool>      _pathcheck_V; // for each net to check whether the FPGA is connected or not, then we can stop Dijkstras
+    // vector<bool>      _pathcheck_V; // for each net to check whether the FPGA is connected or not, then we can stop Dijkstras
     vector<FPGA*>     _FPGA_V;
     vector<Edge*>     _edge_V;
     vector<Net*>      _net_V;

@@ -62,7 +62,6 @@ bool TDM::parseFile(const char *fname)
     {
         _FPGA_V.push_back(new FPGA(i));
     }
-    _pathcheck_V.resize(_FPGA_V.size(), false);
 
     // edge
     _edge_V.reserve(nums[1]);
@@ -98,6 +97,7 @@ bool TDM::parseFile(const char *fname)
             _FPGA_V[value]->addUsage();
         }
         // n->initEdgeTDM(nums[1]);
+        n->initPathCheck(nums[0]);
         _net_V.push_back(n);
     }
 
@@ -134,11 +134,11 @@ bool TDM::parseFile(const char *fname)
         while(!Q.empty()){
             FPGA* f = Q.front();
             Q.pop();
-            for(int i = 0; i < f->getEdgeNum(); ++i){
-                if(!f->getConnectedFPGA(i)->isVisited()){
-                    Q.push(f->getConnectedFPGA(i));
-                    f->getConnectedFPGA(i)->setParent(f);
-                    f->getConnectedFPGA(i)->setVisited(true);
+            for(int j = 0; j < f->getEdgeNum(); ++j){
+                if(!f->getConnectedFPGA(j)->isVisited()){
+                    Q.push(f->getConnectedFPGA(j));
+                    f->getConnectedFPGA(j)->setParent(f);
+                    f->getConnectedFPGA(j)->setVisited(true);
                 }
             }
         }
@@ -183,7 +183,6 @@ void TDM::preRoute(){
 void TDM::findDominantGroup(){
     cout << " [finding dominant group] " << endl;
     clock_t start,end;
-    double max_w = 0.0;
     start = clock();
     // long long int total_subnet = 0;
     // sort(_group_V.begin(), _group_V.end(), groupCompare);  // [Note] This is very time-consuming !!
@@ -202,7 +201,8 @@ void TDM::findDominantGroup(){
         ++_domiantGroupCount;
     }
 
-    double w = 0.0;
+    int idx = -1;
+    double max_w = 0.0, w = 0.0;
   
     for(size_t i = 0; i < _group_V.size(); ++i){
         /*for(int j = 0; j < _group_V[i]->getNetNum(); ++j){
@@ -212,9 +212,11 @@ void TDM::findDominantGroup(){
             }
         }
         w /= _avg_subnet;*/
-        w = (double)_group_V[i]->getSubnetNum()/_avg_subnet;
-        //if(_group_V[i]->isDominant())w *= 0.8;
-        max_w = max(w,max_w);
+        w = (double)_group_V[i]->getSubnetNum() / _avg_subnet;
+        if(w > max_w){
+            max_w = w;
+            idx = i;
+        }
         for(int j = 0; j < _group_V[i]->getNetNum(); ++j){
             _group_V[i]->getNet(j)->setWeight(w);
         }
@@ -227,8 +229,8 @@ void TDM::findDominantGroup(){
     else{
         _iteration_limit = 20;
     }
-    Edge::_AvgWeight = (double)_group_V[0]->getSubnetNum() / _edge_V.size();
-    cout << " Dominant group subnets:" << _group_V[0]->getSubnetNum();
+    Edge::_AvgWeight = (double)_group_V[idx]->getSubnetNum() / _edge_V.size();
+    cout << " Dominant group subnets:" << _group_V[idx]->getSubnetNum();
     cout << " weight: " << Edge::_AvgWeight << endl;
     cout << " avg_subnet:"<< _avg_subnet 
          << " total subnet:" << _total_subnet << endl;
@@ -467,8 +469,6 @@ void TDM::global_router(char* fname)
     long long int minimumTDM = numeric_limits<long long int>::max();
     int iteration = 0, terminateCount = 0, section = 1;
 
-    _pathcheck_V.reserve(_FPGA_V.size());
-
     cout << " [sorting]" << endl;
     start = clock();
     // sort net
@@ -677,7 +677,7 @@ void TDM::Dijkstras(FPGA *source, FPGA *target, unsigned int num, Net* n)
         if (a == target){
             break; // Find the target
         }
-        else if (_pathcheck_V[a->getId()]){
+        else if ( n->isInPathCheck(a->getId()) ){
             break; // Find the steiner point
         }
         double w;
@@ -707,14 +707,14 @@ void TDM::Dijkstras(FPGA *source, FPGA *target, unsigned int num, Net* n)
         }
     }
 
-    _pathcheck_V[a->getId()] = true;
+    n->setPathCheck(a->getId());
     while (a != parent[a->getId()].first)
     {
         FPGA* connectFPGA = parent[a->getId()].first;
         Edge* connectEdge = parent[a->getId()].second;
-        _pathcheck_V[connectFPGA->getId()] = true;
-        connectEdge->addCongestion(c);
+        n->setPathCheck(connectFPGA->getId());
         n->addEdgeNum();
+        connectEdge->addCongestion(c);
         connectEdge->addNet(n);
 
         a = parent[a->getId()].first;
@@ -735,27 +735,21 @@ void TDM::ripup_reroute(set<pIN>& sorted_net)
             // n->getCur_route(j)->addCongestion(c*(-1));
         }
 
-        // Net *n = _net_V[i];
-        _pathcheck_V.clear();
-        _pathcheck_V.resize(_FPGA_V.size(), false);
-        n->resetEdgeNum();
         for (int j = 0; j < n->getSubnetNum(); j++)
         {
             SubNet *sn = n->getSubNet(j);
             FPGA *source = sn->getSource();
             FPGA *target = sn->getTarget();
-            if (_pathcheck_V[source->getId()] && _pathcheck_V[target->getId()])
+            if ( n->isInPathCheck(source->getId()) && n->isInPathCheck(target->getId()) )
                 continue;
-            else if (_pathcheck_V[source->getId()] && !_pathcheck_V[target->getId()])
+            else if ( n->isInPathCheck(source->getId()) && !n->isInPathCheck(target->getId()) )
             { // We can swap source and target to find steiner point efficiently
-                FPGA *temp = source;
-                source = target;
-                target = temp;
+                swap(source, target);
             }
             Dijkstras(source, target, _FPGA_V.size(), n);
 
-            if (!_pathcheck_V[target->getId()]){ 
-                // target is not connected
+           if (n->isInPathCheck(target->getId()))
+            { // target is not connected
                 Dijkstras(target, source, _FPGA_V.size(), n);
             }
         }
@@ -772,24 +766,22 @@ void TDM::local_router(bool b, set<pIN>& sorted_net)
             continue;
         else if(!n->isDominant() && b)
             continue;
-        _pathcheck_V.clear();
-        _pathcheck_V.resize(_FPGA_V.size(), false);
-        n->resetEdgeNum();
+        // _pathcheck_V.clear();
+        // _pathcheck_V.resize(_FPGA_V.size(), false);
+        // n->resetEdgeNum();
         for (int j = 0; j < n->getSubnetNum(); j++)
         {
             SubNet *sn = n->getSubNet(j);
             FPGA *source = sn->getSource();
             FPGA *target = sn->getTarget();
-            if (_pathcheck_V[source->getId()] && _pathcheck_V[target->getId()])
+            if ( n->isInPathCheck(source->getId()) && n->isInPathCheck(target->getId()) )
                 continue;
-            else if (_pathcheck_V[source->getId()] && !_pathcheck_V[target->getId()])
+            else if ( n->isInPathCheck(source->getId()) && !n->isInPathCheck(target->getId()) )
             { // We can swap source and target to find steiner point efficiently
-                FPGA *temp = source;
-                source = target;
-                target = temp;
+                swap(source, target);
             }
             Dijkstras(source, target, _FPGA_V.size(), n);
-            if (!_pathcheck_V[target->getId()])
+            if (n->isInPathCheck(target->getId()))
             { // target is not connected
                 Dijkstras(target, source, _FPGA_V.size(), n);
             }

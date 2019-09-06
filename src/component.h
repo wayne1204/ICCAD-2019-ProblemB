@@ -140,6 +140,9 @@ public:
     void        resetEdgeNum() {_edgeNum = 0;}
     int         getEdgeNum() {return _edgeNum;}
     static void setEdgeSize(int s) {_edge_tdm_size = s;}
+    void        initPathCheck(int s) {_pathCheck.resize(s, false); }
+    bool        isInPathCheck(int i) { return _pathCheck[i]; }
+    void        setPathCheck(int i) {_pathCheck[i] = true;}
 
     // TDM function
     unsigned  getTDM(){ return _TDM;}
@@ -160,9 +163,6 @@ public:
     // group info
     void      setGroupSubnet(int s);
     int       getGroupSubnet(){return _group_subnet;}
-    // void      addGroup(NetGroup* g) {_netgroup.push_back(g); }
-    // NetGroup* getNetGroup(unsigned i) {return _netgroup[i]; }
-    // int       getGroupSize() {return _netgroup.size();}
     vector<unsigned>Min_edge_tdm;
 
 private:
@@ -175,7 +175,7 @@ private:
     double             _weight;
     double             _x;
     FPGA*              _source;
-    // vector<NetGroup*>  _netgroup;	
+    vector<bool>       _pathCheck;
     vector<FPGA*>      _targets;
     vector<SubNet*>    _subnets;     //vector for Subnet
     vector<unsigned>   _edge_tdm;
