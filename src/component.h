@@ -8,6 +8,14 @@
 #include <map>
 #include <unordered_map>
 #include "math.h"
+#include <ext/pb_ds/priority_queue.hpp>
+
+
+class FPGA;
+class Edge;
+class Net;
+class SubNet;
+class NetGroup;
 
 #define pIF pair<int, FPGA*>
 #define pDF pair<double, FPGA*>
@@ -19,11 +27,12 @@
 
 using namespace std;
 
-class FPGA;
-class Edge;
-class Net;
-class SubNet;
-class NetGroup;
+
+
+//typedef __gnu_pbds::priority_queue<pDF, pdfCompare> my_pq;
+//typedef __gnu_pbds::priority_queue<pIF, pifCompare> my_pqn;
+
+
 
 class FPGA
 {
@@ -81,7 +90,7 @@ public:
 
     // edge weight
     double    getWeight();
-    void      addCongestion(int i){_congestion += i;}
+    void      addCongestion(){_congestion++;}
     void      doubleCongestion(){_congestion *= 2;}
     void      initCongestion(){_congestion = 0;}
     void      addCapacity(double i) {_capacity += i;}
@@ -134,15 +143,22 @@ public:
     FPGA*     getTarget(int i) {return _targets[i];}
     void      showInfo();
     int       getTargetNum(){return _targets.size();}
+    static void      setDistanceTable(vector<vector<unsigned char> > t) {_distance = t; }
 
     // route info
     void        addEdgeNum() {_edgeNum++; }
     void        resetEdgeNum() {_edgeNum = 0;}
     int         getEdgeNum() {return _edgeNum;}
+    static void setFPGASize(int s) {_fpga_size = s;}
     static void setEdgeSize(int s) {_edge_tdm_size = s;}
     void        initPathCheck(int s) {_pathCheck.resize(s, false); }
     bool        isInPathCheck(int i) { return _pathCheck[i]; }
     void        setPathCheck(int i) {_pathCheck[i] = true;}
+
+
+    // route function
+    void      Dijkstras(FPGA *source, FPGA *target);
+    void      routeSubNet();
 
     // TDM function
     unsigned  getTDM(){ return _TDM;}
@@ -171,6 +187,8 @@ private:
     int                _edgeNum;
     int                _group_subnet;
     static int         _edge_tdm_size;
+    static int         _fpga_size;
+    static vector<vector<unsigned char> > _distance;
     unsigned           _TDM;
     double             _weight;
     double             _x;

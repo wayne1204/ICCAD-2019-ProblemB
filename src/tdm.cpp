@@ -1,5 +1,4 @@
 #include <fstream>
-#include <cassert>
 #include <algorithm>
 #include <iostream>
 #include <set>
@@ -8,7 +7,7 @@
 #include <limits>
 #include <unordered_set>
 #include <time.h>
-#include <ext/pb_ds/priority_queue.hpp>
+
 
 #include "tdm.h"
 #include "../include/ctpl.h"
@@ -22,17 +21,14 @@ bool groupCompare(NetGroup* a, NetGroup* b) {
 bool netSubnetCompare(Net* a, Net* b) { 
     return (a->getSubnetNum() > b->getSubnetNum());
 }
-struct pdfCompare{
-    bool operator()(pDF a, pDF b){
-        return (a.first > b.first);
-    }
-};
 struct pifCompare{
     bool operator()(pIF a, pIF b){
+        if(a.first == b.first){
+            return (a.second->getEdgeNum() < b.second->getEdgeNum());
+        }
         return (a.first > b.first);
     }
 };
-typedef __gnu_pbds::priority_queue<pDF, pdfCompare> my_pq;
 typedef __gnu_pbds::priority_queue<pIF, pifCompare> my_pqn;
 
 
@@ -80,6 +76,7 @@ bool TDM::parseFile(const char *fname)
 
     // nets
     _net_V.reserve(nums[2]);
+    Net::setFPGASize(nums[0]);
     Net::setEdgeSize(nums[1]);
     for (int i = 0; i < nums[2]; ++i)
     {
@@ -154,13 +151,7 @@ bool TDM::parseFile(const char *fname)
         }
     }
 
-
-    cout << " Isolated FPGA:";
-    for(size_t i = 0; i < _FPGA_V.size(); ++i){
-        if(_FPGA_V[i]->getEdgeNum() == 1)
-            cout << i << " ";
-    }
-    cout << endl;
+    Net::setDistanceTable(_distance);
     end = clock();
     cout << " Time used:" << ((double) (end - start)) / CLOCKS_PER_SEC << endl;
     cout << endl;
@@ -462,8 +453,7 @@ void TDM::showStatus(const char* fname)
     }
 }
 
-void TDM::global_router(char* fname)
-{
+void TDM::global_router(char* fname){
     clock_t start, end;
     //phase1
     long long int minimumTDM = numeric_limits<long long int>::max();
@@ -500,15 +490,15 @@ void TDM::global_router(char* fname)
             //Use shortest path algorithm to route all net
             local_router(true, sorted_net);
 
-            //long long int total = 0;
-            /*for(size_t i = 0; i < _net_V.size(); ++i){
+            long long int total = 0;
+            for(size_t i = 0; i < _net_V.size(); ++i){
                 for(int j = 0; j < _net_V[i]->getSubnetNum(); ++j){
                     SubNet *sn = _net_V[i]->getSubNet(j);
                     total += _distance[sn->getSource()->getId()][sn->getTarget()->getId()];
                 } 
                 total += _net_V[i]->getSubnetNum();
-            }*/
-            //Edge::_AvgWeight = (double)total / (int)_edge_V.size();
+            }
+            Edge::_AvgWeight = (double)total / (int)_edge_V.size();
             //Edge::_AvgWeight = (double)_Edge_avg_weight_for_nondominant / (int)_edge_V.size();
             cout << Edge::_AvgWeight << endl;
             //cout << total << " "<<_Edge_avg_weight_for_nondominant<<endl;
@@ -651,140 +641,57 @@ size_t TDM::getToken(size_t pos, string &s, string &token)
 // }
 
 //single source single target shortest path algortihm
-void TDM::Dijkstras(FPGA *source, FPGA *target, unsigned int num, Net* n)
-{
-    double maxf = numeric_limits<double>::max();
-    // int c = n->isDominant() ? 2: 1;
-    int c = 1;
-    my_pq Q;
-    my_pq::point_iterator iter_V [num];
-    vector<double> d(num, maxf); // distance
-    vector<pFE> parent(num);     // record parentId and edge to parent
-
-    d[source->getId()] = 0.0;
-    parent[source->getId()] = pFE(source, NULL);
-    iter_V[source->getId()] = Q.push(pDF(0, source));
-
-    FPGA *a = NULL;
-    FPGA::setGlobalVisit();
-    while (!Q.empty())
-    {
-        pDF top = Q.top();
-        Q.pop();
-        top.second->setVisited(true);
-        
-        a = top.second;
-        if (a == target){
-            break; // Find the target
-        }
-        else if ( n->isInPathCheck(a->getId()) ){
-            break; // Find the steiner point
-        }
-        double w;
-        FPGA *b;
-        Edge *e;
-        for (int i = 0; i < a->getEdgeNum(); i++)
-        {
-            b = a->getConnectedFPGA(i);
-            if(b->isVisited())
-                continue;
-            e = a->getEdge(i);
-            w = e->getWeight() + _distance[a->getId()][source->getId()] ;
-
-            if (d[a->getId()] + w < d[b->getId()])
-            {
-                double distance = d[b->getId()];
-                d[b->getId()] = d[a->getId()] + w;
-                parent[b->getId()] = pFE(a, e);
-
-                if (distance == maxf){
-                    iter_V[b->getId()] = Q.push(pDF(d[b->getId()], b));
-                }
-                else{
-                    Q.modify(iter_V[b->getId()], pDF(d[b->getId()], b));
-                }
-            }
-        }
-    }
-
-    n->setPathCheck(a->getId());
-    while (a != parent[a->getId()].first)
-    {
-        FPGA* connectFPGA = parent[a->getId()].first;
-        Edge* connectEdge = parent[a->getId()].second;
-        n->setPathCheck(connectFPGA->getId());
-        n->addEdgeNum();
-        connectEdge->addCongestion(c);
-        connectEdge->addNet(n);
-
-        a = parent[a->getId()].first;
-    }
-}
 
 
-void TDM::ripup_reroute(set<pIN>& sorted_net)
-{
-    for (auto it = sorted_net.begin(); it != sorted_net.end(); ++it){
-        Net *n = it->second;
-        if(!n->isDominant()){
-            continue;
-        }
 
-        for(int j = 0; j < n->getEdgeNum(); ++j){
-            // n->getCur_route(j)->removeNet(n);
-            // n->getCur_route(j)->addCongestion(c*(-1));
-        }
+// void TDM::ripup_reroute(set<pIN>& sorted_net)
+// {
+//     for (auto it = sorted_net.begin(); it != sorted_net.end(); ++it){
+//         Net *n = it->second;
+//         if(!n->isDominant()){
+//             continue;
+//         }
 
-        for (int j = 0; j < n->getSubnetNum(); j++)
-        {
-            SubNet *sn = n->getSubNet(j);
-            FPGA *source = sn->getSource();
-            FPGA *target = sn->getTarget();
-            if ( n->isInPathCheck(source->getId()) && n->isInPathCheck(target->getId()) )
-                continue;
-            else if ( n->isInPathCheck(source->getId()) && !n->isInPathCheck(target->getId()) )
-            { // We can swap source and target to find steiner point efficiently
-                swap(source, target);
-            }
-            Dijkstras(source, target, _FPGA_V.size(), n);
+//         for(int j = 0; j < n->getEdgeNum(); ++j){
+//             // n->getCur_route(j)->removeNet(n);
+//             // n->getCur_route(j)->addCongestion(c*(-1));
+//         }
 
-           if (n->isInPathCheck(target->getId()))
-            { // target is not connected
-                Dijkstras(target, source, _FPGA_V.size(), n);
-            }
-        }
-    }
-}
+//         for (int j = 0; j < n->getSubnetNum(); j++)
+//         {
+//             SubNet *sn = n->getSubNet(j);
+//             FPGA *source = sn->getSource();
+//             FPGA *target = sn->getTarget();
+//             if ( n->isInPathCheck(source->getId()) && n->isInPathCheck(target->getId()) )
+//                 continue;
+//             else if ( n->isInPathCheck(source->getId()) && !n->isInPathCheck(target->getId()) )
+//             { // We can swap source and target to find steiner point efficiently
+//                 swap(source, target);
+//             }
+//             Dijkstras(source, target, _FPGA_V.size(), n);
+
+//            if (n->isInPathCheck(target->getId()))
+//             { // target is not connected
+//                 Dijkstras(target, source, _FPGA_V.size(), n);
+//             }
+//         }
+//     }
+// }
 
 //route all nets by Dijkstras algorithm
 void TDM::local_router(bool b, set<pIN>& sorted_net)
 {
     // Route from the smallest/largest net group tdm value
-    for (auto it = sorted_net.begin(); it != sorted_net.end(); ++it){
-        Net *n = it->second;
-        if(n->isDominant() && !b)
-            continue;
-        else if(!n->isDominant() && b)
-            continue;
-        // _pathcheck_V.clear();
-        // _pathcheck_V.resize(_FPGA_V.size(), false);
-        // n->resetEdgeNum();
-        for (int j = 0; j < n->getSubnetNum(); j++)
-        {
-            SubNet *sn = n->getSubNet(j);
-            FPGA *source = sn->getSource();
-            FPGA *target = sn->getTarget();
-            if ( n->isInPathCheck(source->getId()) && n->isInPathCheck(target->getId()) )
+
+    {
+        ctpl::thread_pool p(8);
+        for (auto it = sorted_net.begin(); it != sorted_net.end(); ++it){
+            if(it->second->isDominant() && !b)
                 continue;
-            else if ( n->isInPathCheck(source->getId()) && !n->isInPathCheck(target->getId()) )
-            { // We can swap source and target to find steiner point efficiently
-                swap(source, target);
-            }
-            Dijkstras(source, target, _FPGA_V.size(), n);
-            if (n->isInPathCheck(target->getId()))
-            { // target is not connected
-                Dijkstras(target, source, _FPGA_V.size(), n);
-            }
+            else if(!it->second->isDominant() && b)
+                continue;
+            p.push([](int id, Net *n){n->routeSubNet();}, it->second);
+        
         }
     }
 }

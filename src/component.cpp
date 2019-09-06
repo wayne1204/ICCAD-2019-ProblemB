@@ -6,13 +6,32 @@
 #include "math.h"
 #include <utility>
 #include "component.h"
-#include <cassert>
+#include <mutex>
+
+std::mutex mtx;
 
 float    Edge::_AvgWeight = 0.0;
 double   Edge::_penalty_weight = 0.0;
 unsigned FPGA::_globalVisit = 0;
 double   Edge::_kRatio = 1;
 int      Net::_edge_tdm_size = 0;
+int      Net::_fpga_size = 0;
+vector<vector<unsigned char> > Net::_distance;
+
+struct pdfCompare{
+    bool operator()(pDF a, pDF b){
+        return (a.first > b.first);
+    }
+};
+typedef __gnu_pbds::priority_queue<pDF, pdfCompare> my_pq;
+/*struct pifCompare{
+    bool operator()(pIF a, pIF b){
+        if(a.first == b.first){
+            return (a.second->getEdgeNum() < b.second->getEdgeNum());
+        }
+        return (a.first > b.first);
+    }
+};*/
 
 bool netCompare(Net* a, Net* b) { 
     return (a->getWeight() > b->getWeight());
@@ -89,6 +108,99 @@ void Net::decomposition(){
     }
 }
 
+void Net::Dijkstras(FPGA *source, FPGA *target)
+{
+    double maxf = numeric_limits<double>::max();
+    my_pq Q;
+    my_pq::point_iterator iter_V [_fpga_size];
+    vector<double> d(_fpga_size, maxf); // distance
+    vector<pFE> parent(_fpga_size);     // record parentId and edge to parent
+    vector<bool> visited(_fpga_size, false);
+
+    d[source->getId()] = 0.0;
+    parent[source->getId()] = pFE(source, NULL);
+    iter_V[source->getId()] = Q.push(pDF(0, source));
+
+    FPGA *a = NULL;
+    // FPGA::setGlobalVisit();
+    while (!Q.empty())
+    {
+        pDF top = Q.top();
+        Q.pop();
+        visited[top.second->getId()] = true;
+        
+        a = top.second;
+        if (a == target){
+            break; // Find the target
+        }
+        else if ( _pathCheck[a->getId()] ){
+            break; // Find the steiner point
+        }
+        double w;
+        FPGA *b;
+        Edge *e;
+        for (int i = 0; i < a->getEdgeNum(); i++)
+        {
+            b = a->getConnectedFPGA(i);
+            if(visited[b->getId()])
+                continue;
+            e = a->getEdge(i);
+            w = e->getWeight() + _distance[b->getId()][source->getId()];
+
+            if (d[a->getId()] + w < d[b->getId()])
+            {
+                double distance = d[b->getId()];
+                d[b->getId()] = d[a->getId()] + w;
+                parent[b->getId()] = pFE(a, e);
+
+                if (distance == maxf){
+                    iter_V[b->getId()] = Q.push(pDF(d[b->getId()], b));
+                }
+                else{
+                    Q.modify(iter_V[b->getId()], pDF(d[b->getId()], b));
+                }
+            }
+        }
+    }
+
+    _pathCheck[a->getId()] = true;
+    while (a != parent[a->getId()].first)
+    {
+        FPGA* connectFPGA = parent[a->getId()].first;
+        Edge* connectEdge = parent[a->getId()].second;
+        _pathCheck[connectFPGA->getId()] = true;
+        _edgeNum++;
+
+        mtx.lock();
+        connectEdge->addCongestion();
+        connectEdge->addNet(this);
+        mtx.unlock();
+
+
+        a = parent[a->getId()].first;
+    }
+}
+
+void Net::routeSubNet(){
+
+    for (unsigned int i = 0; i < _subnets.size(); i++){
+        SubNet *sn = _subnets[i];
+        FPGA *source = sn->getSource();
+        FPGA *target = sn->getTarget();
+        if (_pathCheck[source->getId()] && _pathCheck[target->getId()])
+            continue;
+        else if (_pathCheck[source->getId()] && !_pathCheck[target->getId()]){ 
+            // We can swap source and target to find steiner point efficiently
+            swap(source, target);
+        }
+        Dijkstras(source, target);
+        if (_pathCheck[target->getId()]){ 
+            // target is not connected
+            Dijkstras(target, source);
+        }
+    }
+}
+
 void Net::setWeight(double w){
     if(w > _weight)
         _weight = w ;
@@ -140,7 +252,6 @@ void Edge::distributeTDM(){
         // if(_route[i]->isDominant()){
             unsigned new_tdm = ceil(total_sum/(_route[i]->getWeight()));
             new_tdm = (new_tdm % 2 == 0) ? new_tdm : new_tdm + 1;
-            assert(new_tdm > 0);
             _route[i]->setedgeTDM(_uid, new_tdm);
             // total_TDM -= 1.0/(double)new_tdm;
         // }
@@ -149,7 +260,6 @@ void Edge::distributeTDM(){
     // for(; i < _route.size() ; ++i){
     //     long long int new_tdm = ceil( (sum/(_route[i]->getWeight() * _route[i]->getX()))*(1.0/total_TDM) );
     //     new_tdm = (new_tdm % 2 == 0) ? new_tdm : new_tdm + 1;
-    //     assert(new_tdm > 0);
     //     _route[i]->setedgeTDM(_uid, new_tdm);
     // }
 }

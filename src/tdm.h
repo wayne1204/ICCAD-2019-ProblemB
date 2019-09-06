@@ -28,14 +28,12 @@ class TDM
     void showStatus(const char* fname);
     void global_router(char* fname);
     void ripup_reroute(set<pIN>&);
+    void local_router(bool b, set<pIN>& sorted_net);
 
 
     private:
     size_t getToken(size_t pos, string& s, string& token);
     int    strToInt(string& s);
-    //stack<pFE> Dijkstras(FPGA* source,FPGA* target,unsigned int num);
-    void Dijkstras(FPGA* source,FPGA* target,unsigned int num, Net* n);
-    void local_router(bool b, set<pIN>&);
     
     int               _domiantGroupCount;  // number of dominat count
     int               _iteration_limit;
