@@ -97,6 +97,7 @@ public:
 
     static float   _AvgWeight;
     static double  _kRatio;   // ratio used in LUT
+    static double  _penalty_weight;
 
 private:
     unsigned     _uid;

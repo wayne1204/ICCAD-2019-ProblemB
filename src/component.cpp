@@ -9,6 +9,7 @@
 #include <cassert>
 
 float    Edge::_AvgWeight = 0.0;
+double   Edge::_penalty_weight = 0.0;
 unsigned FPGA::_globalVisit = 0;
 double   Edge::_kRatio = 1;
 int      Net::_edge_tdm_size = 0;
@@ -169,8 +170,8 @@ double Edge::getWeight(){
     // cout << _congestion/_AvgWeight << endl;
     int penalty = 0;
     if(_congestion > _AvgWeight)
-        penalty = pow(_congestion - _AvgWeight, 2);
-    return 1 + _congestion + penalty;
+        penalty = _congestion - _AvgWeight;
+    return 1 + _congestion + _penalty_weight*penalty;
 }
 
 void Edge::removeNet(Net* n){

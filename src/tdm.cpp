@@ -177,7 +177,7 @@ void TDM::preRoute(){
 void TDM::findDominantGroup(){
     cout << " [finding dominant group] " << endl;
     clock_t start,end;
-    double max_w = 0;
+    double max_w = 0.0;
     start = clock();
     // long long int total_subnet = 0;
     // sort(_group_V.begin(), _group_V.end(), groupCompare);  // [Note] This is very time-consuming !!
@@ -195,19 +195,26 @@ void TDM::findDominantGroup(){
         _group_V[i]->setDominant();
         ++_domiantGroupCount;
     }
+
+    double w = 0.0;
   
     for(size_t i = 0; i < _group_V.size(); ++i){
-        double w = (double)_group_V[i]->getSubnetNum() / _avg_subnet;
+        for(int j = 0; j < _group_V[i]->getNetNum(); ++j){
+            for(int k = 0; k < _group_V[i]->getNet(j)->getSubnetNum(); ++k){
+                SubNet *sn = _group_V[i]->getNet(j)->getSubNet(k);
+                w += _distance[sn->getSource()->getId()][sn->getTarget()->getId()];
+            }
+        }
+        w /= _avg_subnet;
         max_w = max(w,max_w);
-        if(_group_V[i]->isDominant())
-            w *= 0.8;
         for(int j = 0; j < _group_V[i]->getNetNum(); ++j){
             _group_V[i]->getNet(j)->setWeight(w);
         }
     }
 
     if(max_w > 100){
-        _iteration_limit = 3;
+        _iteration_limit = 5;
+        Edge::_penalty_weight = sqrt(max_w);
     }
     else{
         _iteration_limit = 20;
@@ -477,7 +484,11 @@ void TDM::global_router(char* fname)
 
             long long int total = 0;
             for(size_t i = 0; i < _net_V.size(); ++i){
-                total += _net_V[i]->getSubnetNum();
+                for(int j = 0; j < _net_V[i]->getSubnetNum(); ++j){
+                    SubNet *sn = _net_V[i]->getSubNet(j);
+                    total += _distance[sn->getSource()->getId()][sn->getTarget()->getId()];
+                } 
+                // total += _net_V[i]->getSubnetNum();
             }
             Edge::_AvgWeight = (double)total / (int)_edge_V.size();
             cout << Edge::_AvgWeight << endl;
@@ -522,10 +533,8 @@ void TDM::global_router(char* fname)
             _net_V[i]->updateWeight();
         }
 
-        int tdm_diff = 0;
         //Terminate condition : Compare with minimum answer. If we can't update  minimum answer more than N times, terminate global router.
         if ( maxGroupTDM < minimumTDM) {
-            tdm_diff = minimumTDM - maxGroupTDM;
             minimumTDM = maxGroupTDM;
         }
         else{
@@ -541,12 +550,11 @@ void TDM::global_router(char* fname)
         }
 
         end = clock();
-        double totalt =  ((double) (end - getStarttime())) / CLOCKS_PER_SEC;
         double t =  ((double) (end - start)) / CLOCKS_PER_SEC;
         printf(" #%d section:%d  current: %lld (id:%d)| min: %lld time:%.3f \n", 
         iteration, section, maxGroupTDM, group_id, minimumTDM, t);
-        // if(iteration++ >= _iteration_limit && (minimumTDM*log2(totalt/(totalt-t))) > tdm_diff ){
-        if(iteration++ > 100){
+        if(iteration++ >= _iteration_limit){
+        // if(iteration++ > 100){
             for (size_t i = 0; i < _net_V.size(); i++){
                 // _net_V[i]->updateMin_route();
                 _net_V[i]->updateMin_edge_TDM();
